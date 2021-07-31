@@ -7,6 +7,7 @@
 #' @noRd 
 #'
 #' @importFrom shiny NS tagList
+#' @import shinyjs
 mod_objectif_form_ui <- function(id){
   ns <- NS(id)
   tagList(
@@ -17,8 +18,19 @@ mod_objectif_form_ui <- function(id){
       width = 12,
       closable = TRUE,
       collapsible = TRUE,
-      numericInputIcon(ns("n_objectifs"), label = "Nombre d'objectifs",
-                       value = 2, min = 2, max = 5, step = 1)
+      tagList(
+        uiOutput(ns("indicators_ui")),
+        textInput(inputId = ns("formula"), label = "Formule", value = ""),
+        radioGroupButtons(inputId = ns("sens"), label = "",
+          choices = c("Max", "Min"), selected = "Max", 
+          justified = TRUE),
+        radioGroupButtons(inputId = ns("uncertainty_choice"), label = "",
+                          choices = c("Quantile", "Espérance"), 
+                          selected = "Quantile", justified = TRUE),
+        uiOutput(ns("quantile_choice"))
+      )
+      
+      
     )
   )
 }
@@ -26,6 +38,7 @@ mod_objectif_form_ui <- function(id){
 #' objectif_form Server Functions
 #' 
 #' @import shinydashboardPlus
+#' @import shinyjs
 #' @noRd 
 mod_objectif_form_server <- function(id, prefix = NULL){
   
@@ -60,6 +73,61 @@ mod_objectif_form_server <- function(id, prefix = NULL){
       prefix$id - sum(prefix$r$closed[1:prefix$id])
     })
     
+    #make the indicator picker with the given list of item
+    output$indicators_ui = renderUI({
+      pickerInput(inputId = ns("indicators"), label = "Indicateurs",
+                  choices = LETTERS[1:4], multiple = TRUE)
+    })
+    
+    #update text input with the choice of indicator
+    observe({
+      updateTextInput(session = session, inputId = "formula",
+                      value = paste(input$indicators, collapse = " + "))
+    })
+    
+    error_formula = function(variables, formule){
+      eval(parse(text = paste(variables, "=1",  collapse = ";")))
+      testit::has_error(eval(parse(text = formule)), silent = TRUE)
+    }
+    
+    observe({
+      if (!is.null(input$indicators)){
+        if (error_formula(variables = input$indicators, formule = input$formula)){
+          print("erreur dans la formule")
+          prefix$r$formule_ok[prefix$id] = FALSE
+          # color = "red"
+          # runjs(paste0("document.getElementById('formula').style.border ='", color ,"'"))
+          
+        }else{
+          # color = "green"
+          # runjs(paste0("document.getElementById('formula').style.border ='", color ,"'"))
+          # print("formule ok")
+          prefix$r$formule_ok[prefix$id] = TRUE
+        }
+      }
+    })
+    
+    output$quantile_choice = renderUI({
+
+      if (input$uncertainty_choice == "Quantile"){
+        tagList(
+          radioGroupButtons(inputId = ns("global_quantile"), label = "",
+                            choices = c("Globale", "Individuel"),
+                            selected = "Globale", justified = TRUE),
+          uiOutput(ns("tau_ui"))
+        )
+      }
+    })
+
+    output$tau_ui = renderUI({
+
+      if (input$global_quantile == "Individuel"){
+        tagList(
+          sliderInput(inputId = "tau", label = "Risque", min = 0, max = 1,
+                      value = 0.5, step = 0.01)
+        )
+      }
+  })
     
     prefix$r
   })

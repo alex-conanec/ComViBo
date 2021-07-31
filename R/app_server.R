@@ -7,8 +7,9 @@
 #' @noRd
 app_server <- function( input, output, session ) {
   # Your application server logic 
-  
-  r = reactiveValues(closed = c(FALSE, FALSE))
+  n_objectif_max = 5
+  r = reactiveValues(closed = c(FALSE, FALSE),
+                     formule_ok = c(FALSE, FALSE))
 
   
   r = mod_objectif_form_server("objectif_form_ui_1",
@@ -29,14 +30,30 @@ app_server <- function( input, output, session ) {
       }) %>% max()
 
     insertUI(
-      selector = "#add_objectif",
+      selector = "#fluidRow_button",
       where = c("beforeBegin"),
       ui = mod_objectif_form_ui(paste0("objectif_form_ui_", last_id+1))
     )
     r$closed[last_id+1] = FALSE
+    r$formule_ok[last_id+1] = FALSE
     r = mod_objectif_form_server(paste0("objectif_form_ui_", last_id+1),
                                  prefix = list(id = last_id+1, r = r))
   })
   
-   
+  observe({
+    if (sum(!r$closed) >= n_objectif_max){
+      toggle(id = "add_objectif")
+    }else{
+      show(id = "add_objectif")
+    }
+  }) 
+  
+  observe({
+    if (sum(r$formule_ok[!r$closed]) < sum(!r$closed)){
+      shinyjs::disable("run_simu")
+    }else{
+      shinyjs::enable("run_simu")
+    }
+  })
+  
 }

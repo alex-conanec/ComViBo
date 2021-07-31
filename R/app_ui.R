@@ -6,9 +6,11 @@
 #' @import shinydashboard
 #' @import shinydashboardPlus
 #' @import shinyWidgets
+#' @import shinyjs
 #' @noRd
 app_ui <- function(request) {
   tagList(
+    # useShinyjs(),
     # Leave this function for adding external resources
     golem_add_external_resources(),
     # List the first level UI elements here 
@@ -17,9 +19,20 @@ app_ui <- function(request) {
       header = dashboardHeader(),
       sidebar = dashboardSidebar(minified = TRUE, collapsed = TRUE),
       body = dashboardBody(
+        useShinyjs(),
         mod_objectif_form_ui("objectif_form_ui_1"),
         mod_objectif_form_ui("objectif_form_ui_2"),
-        actionBttn("add_objectif", "add")
+        fluidRow(id = "fluidRow_button",
+          column(width = 4, actionBttn(inputId = "add_objectif", 
+                                       label = "Ajouter objectif",
+                                       style = "gradient")),
+          column(width = 4, actionBttn(inputId = "add_constraint",
+                                       label = "Ajouter contrainte",
+                                       style = "gradient")),
+          column(width = 4, actionBttn(inputId = "run_simu", 
+                                       label = "Lancer simulation",
+                                       style = "gradient"))
+        )
       ),
       controlbar = dashboardControlbar(),
       title = "DashboardPage"
@@ -48,7 +61,7 @@ golem_add_external_resources <- function(){
       app_title = 'CDCapp'
     )
     # Add here other external resources
-    # for example, you can add shinyalert::useShinyalert() 
+    # for example, you can add shinyalert::useShinyalert()
   )
 }
 
