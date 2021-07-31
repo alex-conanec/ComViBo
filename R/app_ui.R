@@ -3,14 +3,26 @@
 #' @param request Internal parameter for `{shiny}`. 
 #'     DO NOT REMOVE.
 #' @import shiny
+#' @import shinydashboard
+#' @import shinydashboardPlus
+#' @import shinyWidgets
 #' @noRd
 app_ui <- function(request) {
   tagList(
     # Leave this function for adding external resources
     golem_add_external_resources(),
-    # Your application UI logic 
-    fluidPage(
-      h1("CDCapp")
+    # List the first level UI elements here 
+    dashboardPage(
+      options = list(sidebarExpandOnHover = TRUE),
+      header = dashboardHeader(),
+      sidebar = dashboardSidebar(minified = TRUE, collapsed = TRUE),
+      body = dashboardBody(
+        mod_objectif_form_ui("objectif_form_ui_1"),
+        mod_objectif_form_ui("objectif_form_ui_2"),
+        actionBttn("add_objectif", "add")
+      ),
+      controlbar = dashboardControlbar(),
+      title = "DashboardPage"
     )
   )
 }
