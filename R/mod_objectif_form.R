@@ -85,11 +85,13 @@ mod_objectif_form_server <- function(id, prefix = NULL){
                       value = paste(input$indicators, collapse = " + "))
     })
     
+    #function checking the formula
     error_formula = function(variables, formule){
       eval(parse(text = paste(variables, "=1",  collapse = ";")))
       testit::has_error(eval(parse(text = formule)), silent = TRUE)
     }
     
+    #check the formula
     observe({
       if (!is.null(input$indicators)){
         if (error_formula(variables = input$indicators, formule = input$formula)){
@@ -107,6 +109,7 @@ mod_objectif_form_server <- function(id, prefix = NULL){
       }
     })
     
+    # render global or individual button if uncertainty_choice == "Quantile"
     output$quantile_choice = renderUI({
 
       if (input$uncertainty_choice == "Quantile"){
@@ -114,21 +117,39 @@ mod_objectif_form_server <- function(id, prefix = NULL){
           radioGroupButtons(inputId = ns("global_quantile"), label = "",
                             choices = c("Globale", "Individuel"),
                             selected = "Globale", justified = TRUE),
-          uiOutput(ns("tau_ui"))
-        )
-      }
-    })
-
-    output$tau_ui = renderUI({
-
-      if (input$global_quantile == "Individuel"){
-        tagList(
-          sliderInput(inputId = "tau", label = "Risque", min = 0, max = 1,
+          sliderInput(inputId = ns("tau"), label = "Risque", min = 0, max = 1,
                       value = 0.5, step = 0.01)
         )
       }
-  })
+    })
     
+    observe({
+      if (!is.null(input$tau)){
+        prefix$r$tau[prefix$id] = input$tau
+      }
+    })
+    
+    observe({
+      if (!is.null(input$global_quantile)){
+        prefix$r$globale[prefix$id] = input$global_quantile == "Globale"
+      }
+    })
+   
+    observeEvent(input$tau,{
+      if (prefix$r$globale[prefix$id]){
+        prefix$r$new_tau = input$tau
+      }
+    })
+    
+    observeEvent(prefix$r$new_tau,{
+      if(!is.na(prefix$r$globale[prefix$id])){
+        if (prefix$r$globale[prefix$id]){
+          updateSliderInput(session = session, inputId = "tau",
+                            value = prefix$r$new_tau)
+        }
+      }
+    })
+
     prefix$r
   })
 }

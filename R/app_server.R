@@ -9,7 +9,10 @@ app_server <- function( input, output, session ) {
   # Your application server logic 
   n_objectif_max = 5
   r = reactiveValues(closed = c(FALSE, FALSE),
-                     formule_ok = c(FALSE, FALSE))
+                     formule_ok = c(FALSE, FALSE),
+                     globale = NULL,
+                     tau = NULL,
+                     new_tau = NULL)
 
   
   r = mod_objectif_form_server("objectif_form_ui_1",
@@ -42,9 +45,9 @@ app_server <- function( input, output, session ) {
   
   observe({
     if (sum(!r$closed) >= n_objectif_max){
-      toggle(id = "add_objectif")
+      shinyjs::disable("add_objectif")
     }else{
-      show(id = "add_objectif")
+      shinyjs::enable("add_objectif")
     }
   }) 
   
