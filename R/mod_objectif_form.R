@@ -45,10 +45,11 @@ mod_objectif_form_server <- function(id, prefix = NULL){
   moduleServer( id, function(input, output, session){
     ns <- session$ns
     
+    #inform the reactiveValues when the box is closed
     observeEvent(input$mybox$visible, {
       
       if (!input$mybox$visible){
-        prefix$r$closed[prefix$id] = TRUE
+        prefix$r$objectif_form$closed[prefix$id] = TRUE
       }
       
       updateBox("mybox", action = "update",
@@ -57,7 +58,7 @@ mod_objectif_form_server <- function(id, prefix = NULL){
     
     # closable become FALSE when the number of box is lower or equal than 2
     observe({
-      if (sum(!prefix$r$closed) <= 2){
+      if (sum(!prefix$r$objectif_form$closed) <= 2){
         updateBox("mybox", action = "update",
                   options = list(title = h2(paste0("Objectif N°", id_new())),
                                  closable = FALSE))
@@ -70,7 +71,7 @@ mod_objectif_form_server <- function(id, prefix = NULL){
     
     #update number
     id_new = reactive({
-      prefix$id - sum(prefix$r$closed[1:prefix$id])
+      prefix$id - sum(prefix$r$objectif_form$closed[1:prefix$id])
     })
     
     #make the indicator picker with the given list of item
@@ -96,7 +97,7 @@ mod_objectif_form_server <- function(id, prefix = NULL){
       if (!is.null(input$indicators)){
         if (error_formula(variables = input$indicators, formule = input$formula)){
           print("erreur dans la formule")
-          prefix$r$formule_ok[prefix$id] = FALSE
+          prefix$r$objectif_form$formule_ok[prefix$id] = FALSE
           # color = "red"
           # runjs(paste0("document.getElementById('formula').style.border ='", color ,"'"))
           
@@ -104,7 +105,7 @@ mod_objectif_form_server <- function(id, prefix = NULL){
           # color = "green"
           # runjs(paste0("document.getElementById('formula').style.border ='", color ,"'"))
           # print("formule ok")
-          prefix$r$formule_ok[prefix$id] = TRUE
+          prefix$r$objectif_form$formule_ok[prefix$id] = TRUE
         }
       }
     })
@@ -123,29 +124,33 @@ mod_objectif_form_server <- function(id, prefix = NULL){
       }
     })
     
+    #copy input$tau in reactvalue
     observe({
       if (!is.null(input$tau)){
-        prefix$r$tau[prefix$id] = input$tau
+        prefix$r$objectif_form$tau[prefix$id] = input$tau
       }
     })
     
+    #copy input$globale_quantile in reactvalue
     observe({
       if (!is.null(input$global_quantile)){
-        prefix$r$globale[prefix$id] = input$global_quantile == "Globale"
+        prefix$r$objectif_form$globale[prefix$id] = input$global_quantile == "Globale"
       }
     })
    
+    #link the globale tau together
     observeEvent(input$tau,{
-      if (prefix$r$globale[prefix$id]){
-        prefix$r$new_tau = input$tau
+      if (prefix$r$objectif_form$globale[prefix$id]){
+        prefix$r$objectif_form$new_tau = input$tau
       }
     })
     
-    observeEvent(prefix$r$new_tau,{
-      if(!is.na(prefix$r$globale[prefix$id])){
-        if (prefix$r$globale[prefix$id]){
+    #link the globale tau together
+    observeEvent(prefix$r$objectif_form$new_tau,{
+      if(!is.na(prefix$r$objectif_form$globale[prefix$id])){
+        if (prefix$r$objectif_form$globale[prefix$id]){
           updateSliderInput(session = session, inputId = "tau",
-                            value = prefix$r$new_tau)
+                            value = prefix$r$objectif_form$new_tau)
         }
       }
     })
