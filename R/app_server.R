@@ -8,23 +8,40 @@
 app_server <- function( input, output, session ) {
   # Your application server logic 
   n_objectif_max = 5
+  data("dataset")
+  data("unites")
+
+  static_data = list(
+    data = dataset,
+    indicators_idx = 18:NCOL(dataset),
+    var_decision_idx = c(2:3, 6:17),
+    var_decision_quali_name = colnames(dataset[c(2:3, 6:17)])[!sapply(dataset[c(2:3, 6:17)], is.numeric)],
+    unites = unites
+  )
+
   r = reactiveValues(
+    data = dataset,
     objectif_form = reactiveValues(
       closed = c(FALSE, FALSE),
       formule_ok = c(FALSE, FALSE),
       globale = NULL,
       tau = NULL,
-      new_tau = NULL),
+      new_tau = NULL,
+      mask = NULL),
     constraint_form = reactiveValues(
-      closed = NULL)
+      closed = NULL,
+      var_deci_input = NULL,
+      value = NULL,
+      filled = NULL)
     )
 
-  # b = reactiveValues(closed = NULL)
-  
+
   r = mod_objectif_form_server("objectif_form_ui_1",
-                               prefix = list(id = 1, r = r))
+                               prefix = list(id = 1, r = r,
+                                             static_data = static_data))
   r = mod_objectif_form_server("objectif_form_ui_2",
-                               prefix = list(id = 2, r = r))
+                               prefix = list(id = 2, r = r, 
+                                             static_data = static_data))
   
 
   
@@ -46,7 +63,8 @@ app_server <- function( input, output, session ) {
     r$objectif_form$closed[last_id+1] = FALSE
     r$objectif_form$formule_ok[last_id+1] = FALSE
     r = mod_objectif_form_server(paste0("objectif_form_ui_", last_id+1),
-                                 prefix = list(id = last_id+1, r = r))
+                                 prefix = list(id = last_id+1, r = r,
+                                               static_data = static_data))
   })
   
   #add constraint
@@ -70,8 +88,10 @@ app_server <- function( input, output, session ) {
     )
     
     r$constraint_form$closed[last_id+1] = FALSE
+    r$constraint_form$filled[last_id+1] = FALSE
     r = mod_constraint_form_server(paste0("constraint_form_ui_", last_id+1),
-                                 prefix = list(id = last_id+1, r = r))
+                                 prefix = list(id = last_id+1, r = r,
+                                               static_data = static_data))
   })
   
   
@@ -85,14 +105,35 @@ app_server <- function( input, output, session ) {
   }) 
   
 
-  #disable/enable the run_simu button
+  #disable/enable the run_simu button if objectif and constraint are filled correctly
   observe({
     if (sum(r$objectif_form$formule_ok[!r$objectif_form$closed]) < 
         sum(!r$objectif_form$closed)){
       shinyjs::disable("run_simu")
     }else{
-      shinyjs::enable("run_simu")
+      if (is.null(r$constraint_form$closed)){
+        shinyjs::enable("run_simu")
+      }else{
+        if (any(!r$constraint_form$filled[!r$constraint_form$closed])){
+          shinyjs::disable("run_simu")
+        }else{
+          shinyjs::enable("run_simu")
+        }
+      }
     }
   })
   
+
+  #mask
+  observe({
+    mask = as.data.frame(r$objectif_form$mask) %>% apply(1, all)
+    if (length(mask) > 0){
+      r$data = static_data$data[mask,]
+    }
+    print(NROW(r$data))
+  })
+  
+
+  
+
 }

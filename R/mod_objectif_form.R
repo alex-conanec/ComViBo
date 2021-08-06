@@ -77,17 +77,20 @@ mod_objectif_form_server <- function(id, prefix = NULL){
     #make the indicator picker with the given list of item
     output$indicators_ui = renderUI({
       pickerInput(inputId = ns("indicators"), label = "Indicateurs",
-                  choices = LETTERS[1:4], multiple = TRUE)
+                  choices = colnames(prefix$static_data$data)[prefix$static_data$indicators_idx],
+                  multiple = TRUE)
     })
     
     #update text input with the choice of indicator
     observe({
       updateTextInput(session = session, inputId = "formula",
-                      value = paste(input$indicators, collapse = " + "))
+                      value = paste(paste0("`", input$indicators, "`"),
+                                    collapse = " + "))
     })
     
     #function checking the formula
     error_formula = function(variables, formule){
+      variables = paste0("`", variables, "`")
       eval(parse(text = paste(variables, "=1",  collapse = ";")))
       testit::has_error(eval(parse(text = formule)), silent = TRUE)
     }
@@ -153,6 +156,25 @@ mod_objectif_form_server <- function(id, prefix = NULL){
                             value = prefix$r$objectif_form$new_tau)
         }
       }
+    })
+    
+    data(dataset)
+    colnames(dataset)
+    sapply(c("JUTOSITE", "N6/N3"), function(ind){
+      is.na(dataset[,ind])
+    }) %>% apply(1, all)
+    
+    #create a mask depending on na value on he indicators selected
+    observe({
+      if (!is.null(input$indicators)){
+        prefix$r$objectif_form$mask[[prefix$id]] =
+          sapply(input$indicators, function(x){
+            col_name = colnames(prefix$static_data$data) == x
+            !is.na(prefix$static_data$data[,col_name])
+          }) %>% apply(1, all)
+      }else{
+        prefix$r$objectif_form$mask[[prefix$id]] = NULL
+      }   
     })
 
     prefix$r
