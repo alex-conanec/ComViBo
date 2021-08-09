@@ -32,7 +32,8 @@ app_ui <- function(request) {
           column(width = 4, actionBttn(inputId = "run_simu", 
                                        label = "Lancer simulation",
                                        style = "gradient"))
-        )
+        ),
+        uiOutput("decision_space_ui")
       ),
       controlbar = dashboardControlbar(),
       title = "DashboardPage"

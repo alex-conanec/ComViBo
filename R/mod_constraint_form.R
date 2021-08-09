@@ -65,7 +65,7 @@ mod_constraint_form_server <- function(id, prefix = NULL){
     output$var_deci_ui = renderUI({
       pickerInput(inputId = ns("var_deci"), label = "Variable de décision",
                   choices = colnames(prefix$static_data$data)[prefix$static_data$var_decision_idx],
-                  multiple = TRUE)
+                  multiple = FALSE) #can change multiple arg ??
     })
     
 
@@ -108,6 +108,7 @@ mod_constraint_form_server <- function(id, prefix = NULL){
         }
     })
     
+    #tell if the constraint is dully filled
     observe({
       if (!is.null(input$var_deci)){
         if (input$var_deci %in% prefix$static_data$var_decision_quali_name){
@@ -132,6 +133,29 @@ mod_constraint_form_server <- function(id, prefix = NULL){
       }
     })
     
+    #create a mask depending on the constraint registered
+    observe({
+      if (prefix$r$constraint_form$filled[prefix$id]){
+
+          operator = ifelse(input$operator %in% c("in", "not in"), "%in%", input$operator)
+
+          mask = eval(parse(
+            text = paste("prefix$static_data$data[,input$var_deci, drop = TRUE]",
+                        operator, "input$value")
+            ))
+
+
+          if (input$operator == "not in"){
+            mask = !mask
+          }
+
+          prefix$r$constraint_form$mask[[prefix$id]] = mask
+
+      }else{
+        prefix$r$constraint_form$mask[[prefix$id]] =
+          rep(TRUE, NROW(prefix$static_data$data))
+      }
+    })
     
     prefix$r
     

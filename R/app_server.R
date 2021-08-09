@@ -16,6 +16,7 @@ app_server <- function( input, output, session ) {
     indicators_idx = 18:NCOL(dataset),
     var_decision_idx = c(2:3, 6:17),
     var_decision_quali_name = colnames(dataset[c(2:3, 6:17)])[!sapply(dataset[c(2:3, 6:17)], is.numeric)],
+    var_decision_quanti_name = colnames(dataset[c(2:3, 6:17)])[sapply(dataset[c(2:3, 6:17)], is.numeric)],
     unites = unites
   )
 
@@ -32,7 +33,8 @@ app_server <- function( input, output, session ) {
       closed = NULL,
       var_deci_input = NULL,
       value = NULL,
-      filled = NULL)
+      filled = NULL,
+      mask = NULL)
     )
 
 
@@ -107,7 +109,7 @@ app_server <- function( input, output, session ) {
 
   #disable/enable the run_simu button if objectif and constraint are filled correctly
   observe({
-    if (sum(r$objectif_form$formule_ok[!r$objectif_form$closed]) < 
+    if (sum(r$objectif_form$formule_ok[!r$objectif_form$closed]) <
         sum(!r$objectif_form$closed)){
       shinyjs::disable("run_simu")
     }else{
@@ -133,7 +135,26 @@ app_server <- function( input, output, session ) {
     print(NROW(r$data))
   })
   
+  #if run_simu is pressed
+  observeEvent(input$run_simu,{
+    data = isolate(r$data)
+    mask = as.data.frame(isolate(r$constraint_form$mask))
+    if (NCOL(mask) > 0){
+      mask_obj = as.data.frame(isolate(r$objectif_form$mask)) %>% apply(1, all)
+      mask = mask %>% apply(1, all)
+      data = data[mask[mask_obj],]
+    }
 
+    print(NROW(data))
+
+    #add decision space plot
+    output$decision_space_ui = renderUI({
+      mod_decision_space_ui("decision_space_ui_1")
+    })
+    mod_decision_space_server("decision_space_ui_1",
+                              prefix = list(r = r, static_data = static_data,
+                                            data = data))
+  })
   
 
 }
