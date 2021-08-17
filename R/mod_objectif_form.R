@@ -89,16 +89,30 @@ mod_objectif_form_server <- function(id, prefix = NULL){
     })
     
     #function checking the formula
-    error_formula = function(variables, formule){
-      variables = paste0("`", variables, "`")
+    error_formula = reactive({
+      variables = paste0("`", input$indicators, "`")
       eval(parse(text = paste(variables, "=1",  collapse = ";")))
-      testit::has_error(eval(parse(text = formule)), silent = TRUE)
-    }
+      testit::has_error(eval(parse(text = input$formula)), silent = TRUE)
+    })
+    
+    
+    calc_objective = reactive({
+      df = prefix$static_data$data
+      colnames(df) = paste0("`", colnames(df), "`")
+      for (ind in input$indicators){
+        ind = paste0("`", ind, "`")
+        eval(parse(
+          text = paste0(ind, " = c(" , paste0(df[,ind, drop = TRUE],
+                                              collapse = ", "), ")")
+          ))
+      }
+      eval(parse(text = input$formula))
+    })
     
     #check the formula
     observe({
       if (!is.null(input$indicators)){
-        if (error_formula(variables = input$indicators, formule = input$formula)){
+        if (error_formula()){
           print("erreur dans la formule")
           prefix$r$objectif_form$formule_ok[prefix$id] = FALSE
           # color = "red"
@@ -134,6 +148,32 @@ mod_objectif_form_server <- function(id, prefix = NULL){
       }
     })
     
+    observe({
+      if (!is.null(input$global_quantile)){
+        prefix$r$objectif_form$globale_tau[prefix$id] = input$global_quantile == "Globale"
+      }
+    })
+    
+    observe({
+      if (!is.null(input$sens)){
+        prefix$r$objectif_form$sens[prefix$id] = input$sens
+      }
+    })
+    
+    observe({
+      if (!is.null(input$indicators)){
+        if (!error_formula()){
+          prefix$r$objectif_form$Y_calc[[prefix$id]] = calc_objective()
+        }
+      }
+    })
+    
+    observe({
+      if (!is.null(input$uncertainty_choice)){
+        prefix$r$objectif_form$quantile[prefix$id] = input$uncertainty_choice == "Quantile"
+      }
+    })
+    
     #copy input$globale_quantile in reactvalue
     observe({
       if (!is.null(input$global_quantile)){
@@ -157,12 +197,6 @@ mod_objectif_form_server <- function(id, prefix = NULL){
         }
       }
     })
-    
-    data(dataset)
-    colnames(dataset)
-    sapply(c("JUTOSITE", "N6/N3"), function(ind){
-      is.na(dataset[,ind])
-    }) %>% apply(1, all)
     
     #create a mask depending on na value on he indicators selected
     observe({
