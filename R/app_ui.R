@@ -33,7 +33,8 @@ app_ui <- function(request) {
                                        label = "Lancer simulation",
                                        style = "gradient"))
         ),
-        uiOutput("decision_space_ui")
+        uiOutput("decision_space_ui"),
+        uiOutput("tradeoff_plot_ui")
       ),
       controlbar = dashboardControlbar(),
       title = "DashboardPage"
