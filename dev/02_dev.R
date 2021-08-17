@@ -20,6 +20,7 @@ usethis::use_package( "shinydashboardPlus" )
 usethis::use_package( "shinyWidgets" )
 usethis::use_package( "testit" )
 usethis::use_package( "shinyjs" )
+usethis::use_package( "optisure" )
 
 ## Add modules ----
 ## Create a module infrastructure in R/
@@ -27,6 +28,7 @@ usethis::use_package( "shinyjs" )
 golem::add_module( name = "objectif_form" ) 
 golem::add_module( name = "constraint_form" )
 golem::add_module( name = "decision_space" ) 
+golem::add_module( name = "tradeoff_plot" ) 
 
 
 ## Add helper functions ----
