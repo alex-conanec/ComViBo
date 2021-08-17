@@ -4,22 +4,30 @@
 #'     DO NOT REMOVE.
 #' @import shiny
 #' @importFrom magrittr %>% 
+#' @import optisure  
 #' @noRd
 app_server <- function( input, output, session ) {
   # Your application server logic 
   n_objectif_max = 5
+  TT = 10
   data("dataset")
   data("unites")
 
   static_data = list(
     data = dataset,
     indicators_idx = 18:NCOL(dataset),
-    var_decision_idx = c(2:3, 6:17),
-    var_decision_quali_name = colnames(dataset[c(2:3, 6:17)])[!sapply(dataset[c(2:3, 6:17)], is.numeric)],
-    var_decision_quanti_name = colnames(dataset[c(2:3, 6:17)])[sapply(dataset[c(2:3, 6:17)], is.numeric)],
+    var_decision_idx = c(2,#:3, #enleve breed pour l'instant car trop de modalites fait planter le model quantil
+                         6:17),
     unites = unites
   )
-
+  
+  static_data$var_decision_quali_name =
+    colnames(dataset[static_data$var_decision_idx])[
+      !sapply(dataset[static_data$var_decision_idx], is.numeric)]
+  static_data$var_decision_quanti_name = 
+    colnames(dataset[static_data$var_decision_idx])[
+      sapply(dataset[static_data$var_decision_idx], is.numeric)]
+  
   r = reactiveValues(
     data = dataset,
     objectif_form = reactiveValues(
@@ -27,11 +35,16 @@ app_server <- function( input, output, session ) {
       formule_ok = c(FALSE, FALSE),
       globale = NULL,
       tau = NULL,
+      globale_tau = NULL,
+      sens = NULL,
+      Y_calc = NULL,
+      quantile = NULL,
       new_tau = NULL,
       mask = NULL),
     constraint_form = reactiveValues(
       closed = NULL,
       var_deci_input = NULL,
+      constraint_function = NULL,
       value = NULL,
       filled = NULL,
       mask = NULL)
@@ -137,24 +150,74 @@ app_server <- function( input, output, session ) {
   
   #if run_simu is pressed
   observeEvent(input$run_simu,{
+    
+    #filter the data with the constraint
     data = isolate(r$data)
     mask = as.data.frame(isolate(r$constraint_form$mask))
     if (NCOL(mask) > 0){
       mask_obj = as.data.frame(isolate(r$objectif_form$mask)) %>% apply(1, all)
       mask = mask %>% apply(1, all)
       data = data[mask[mask_obj],]
+      mask_pr_Y = mask_obj & mask 
+    }else{
+      mask_pr_Y = as.data.frame(isolate(r$objectif_form$mask)) %>% apply(1, all) 
     }
-
     print(NROW(data))
+    
+    #set the progress bar 
+    progress <- shiny::Progress$new()
+    progress$set(message = "Simulation", value = 0)
+    on.exit(progress$close())
+    
+    # TT = 10
+    updateProgress <- function(detail = NULL) {
+      progress$inc(amount = 1/(TT + 4), detail = detail)
+    }
+    
+    #call the optimise function
+    Y = as.data.frame(isolate(r$objectif_form$Y_calc))[mask_pr_Y,]
+    colnames(Y) = paste0("objectif_", 1:NCOL(Y))
+    
+    if (NROW(Y) < 200){
+      N = NULL
+    }else{
+      N = 100
+    }
+    
+    res = optisure(X = data[,static_data$var_decision_idx],
+                   Y = Y,
+                   sens = isolate(r$objectif_form$sens),
+                   quantile_utility_idx = isolate(r$objectif_form$quantile),
+                   tau = isolate(r$objectif_form$tau),
+                   globale_tau = isolate(r$objectif_form$globale_tau),
+                   g = isolate(r$constraint_form$constraint_function),
+                   X_space_csrt = TRUE,
+                   alpha = 0.12,
+                   TT = TT,
+                   N = N,
+                   updateProgress = updateProgress,
+                   seed = 123)
 
-    #add decision space plot
+    # saveRDS(res, "res2.RDS")
+    # res = readRDS("res2.RDS")
+    
+    #render decision espace 
     output$decision_space_ui = renderUI({
       mod_decision_space_ui("decision_space_ui_1")
     })
+    
     mod_decision_space_server("decision_space_ui_1",
                               prefix = list(r = r, static_data = static_data,
-                                            data = data))
+                                            data = data, res = res))
+    
+    #render plot res
+    output$tradeoff_plot_ui = renderUI({
+      mod_tradeoff_plot_ui("tradeoff_plot_ui_1")
+    })
+    mod_tradeoff_plot_server("tradeoff_plot_ui_1", 
+                             prefix = list(res = res, static_data = static_data,
+                                           p = sum(!isolate(r$objectif_form$closed))))
+    
   })
-  
 
 }
