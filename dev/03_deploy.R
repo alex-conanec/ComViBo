@@ -40,3 +40,14 @@ golem::add_dockerfile_shinyproxy()
 
 ## If you want to deploy to Heroku
 golem::add_dockerfile_heroku()
+
+#push to heroku procedure:
+# heroku container:login
+# heroku create cdcapp-2021
+# docker build -t cdcapp . #bien checker qu'il n'y a pas de pb lors de l'installation d'optisure depuis github
+# heroku container:push web #verifier qu'il envoie la bonne image...
+# heroku container:release web
+# heroku open
+
+
+# RUN Rscript -e 'remotes::install_github("alex-conanec/optisure", upgrade = "never")'
