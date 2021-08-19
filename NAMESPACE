@@ -2,6 +2,8 @@
 
 export(run_app)
 import(ggplot2)
+import(optisure)
+import(plotly)
 import(shiny)
 import(shinyWidgets)
 import(shinydashboard)
