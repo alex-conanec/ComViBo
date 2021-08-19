@@ -10,14 +10,16 @@ app_server <- function( input, output, session ) {
   # Your application server logic 
   n_objectif_max = 5
   TT = 10
-  data("dataset")
+  data("data_quali")
+  dataset = data_quali
   data("unites")
 
   static_data = list(
     data = dataset,
     indicators_idx = 18:NCOL(dataset),
-    var_decision_idx = c(2,#:3, #enleve breed pour l'instant car trop de modalites fait planter le model quantil
-                         6:17),
+    # var_decision_idx = c(2,#:3, #enleve breed pour l'instant car trop de modalites fait planter le model quantil
+    #                      6:17),
+    var_decision_idx = c(6:16), #avec data_quali
     unites = unites
   )
   
@@ -177,14 +179,22 @@ app_server <- function( input, output, session ) {
     #call the optimise function
     Y = as.data.frame(isolate(r$objectif_form$Y_calc))[mask_pr_Y,]
     colnames(Y) = paste0("objectif_", 1:NCOL(Y))
+
+    N=20    
+    # if (NROW(Y) < 200){
+    #   N = NULL
+    # }else{
+    #   N = 100
+    # }
     
-    if (NROW(Y) < 200){
-      N = NULL
-    }else{
-      N = 100
+    X = data[,static_data$var_decision_idx]
+    is_fac = !sapply(X, is.numeric)
+    for (i in which(is_fac)){
+      X[,i] = droplevels(X[,i,T])
     }
     
-    res = optisure(X = data[,static_data$var_decision_idx],
+    
+    res = optisure(X = X,
                    Y = Y,
                    sens = isolate(r$objectif_form$sens),
                    quantile_utility_idx = isolate(r$objectif_form$quantile),
@@ -192,7 +202,7 @@ app_server <- function( input, output, session ) {
                    globale_tau = isolate(r$objectif_form$globale_tau),
                    g = isolate(r$constraint_form$constraint_function),
                    X_space_csrt = TRUE,
-                   alpha = 0.12,
+                   alpha = 0.50,
                    TT = TT,
                    N = N,
                    updateProgress = updateProgress,
@@ -202,13 +212,13 @@ app_server <- function( input, output, session ) {
     # res = readRDS("res2.RDS")
     
     #render decision espace 
-    output$decision_space_ui = renderUI({
-      mod_decision_space_ui("decision_space_ui_1")
-    })
-    
-    mod_decision_space_server("decision_space_ui_1",
-                              prefix = list(r = r, static_data = static_data,
-                                            data = data, res = res))
+    # output$decision_space_ui = renderUI({
+    #   mod_decision_space_ui("decision_space_ui_1")
+    # })
+    # 
+    # mod_decision_space_server("decision_space_ui_1",
+    #                           prefix = list(r = r, static_data = static_data,
+    #                                         data = data, res = res))
     
     #render plot res
     output$tradeoff_plot_ui = renderUI({
