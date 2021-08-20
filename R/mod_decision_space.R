@@ -18,19 +18,7 @@ mod_decision_space_ui <- function(id){
       status = "danger", 
       solidHeader = FALSE, 
       collapsible = TRUE,
-      sidebar = boxSidebar(
-        id = ns("var_sel"),
-        width = 25,
-        startOpen = TRUE,
-        materialSwitch(inputId = ns("data_plot"), label = "Données",
-                       value = TRUE, status = "primary"),
-        pickerInput(inputId = ns("x1"), label = "X1", choices = NULL,
-                    multiple = FALSE),
-        pickerInput(inputId = ns("x2"), label = "X2", choices = NULL,
-                    multiple = FALSE),
-        uiOutput(ns("x_cate_lev_ui"))
-      ),
-      plotOutput(ns("plot"))
+      plotlyOutput(ns("plot"))
     )
   )
 }
@@ -42,77 +30,22 @@ mod_decision_space_server <- function(id, prefix = NULL){
   moduleServer( id, function(input, output, session){
     ns <- session$ns
  
-    observe({
-      updatePickerInput(session = session, inputId = "x1",
-                        choices = prefix$static_data$var_decision_quanti_name,
-                        selected = prefix$static_data$var_decision_quanti_name[1])
+    
+    res_p = plot(prefix$res$X_space_csrt, as_list_plot = TRUE)
+    
+    nrow_react = reactive({
+      length(res_p) %/% prefix$r$n_x_plot + 1
+    })
+    
+    output$plot = renderPlotly({
       
-      updatePickerInput(session = session, inputId = "x2",
-                        choices = prefix$static_data$var_decision_quanti_name,
-                        selected = prefix$static_data$var_decision_quanti_name[2])
+      plotly::ggplotly(plotly::subplot(res_p, titleX = TRUE,
+                                       nrows = nrow_react(),
+                                       margin = c(0.05, 0.05, 0.05, 0.2))) %>%
+        plotly::highlight(on = "plotly_selected", off= "plotly_deselect",
+                          color = "red")
     })
-    
-    output$x_cate_lev_ui = renderUI({
-      if (input$data_plot){
-        tagList(
-          pickerInput(inputId = ns("x_cate"), label = "Couleur",
-                      choices = prefix$static_data$var_decision_quali_name,
-                      multiple = FALSE)
-        )
-      }else{
-        tagList(
-          lapply(prefix$static_data$var_decision_quali_name, function(x){
-            pickerInput(inputId = ns(paste0(x, "_lev")), label = x,
-                        choices = unique(prefix$data[,x]),
-                        selected = unique(prefix$data[,x])[1],
-                        multiple = FALSE)
-          })
-        )
-      }
-    })
-    
-    X_feasible = reactive({
-      n_MC = 10^4
-      x_quali = prefix$static_data$var_decision_quali_name
-      names(x_quali) = prefix$static_data$var_decision_quali_name
-      x_quanti = prefix$static_data$var_decision_quanti_name
-      names(x_quanti) = prefix$static_data$var_decision_quanti_name
-      
-      X_MC = cbind(
-        lapply(x_quali, function(x){
-          sample(x = unique(prefix$data[,x, drop = TRUE]), size = n_MC, 
-                 replace = TRUE)
-        }) %>% as.data.frame(),
-        lapply(x_quanti, function(x){
-          runif(n = n_MC, min(prefix$data[,x, drop = TRUE]),
-                max(prefix$data[,x, drop = TRUE]))
-        }) %>% as.data.frame()
-      )
-      
-      X_MC$feasible = prefix$res$g$cstr_X_space(X_MC)
-      X_MC
-    })
-    
-    df = reactive({
-      mask = lapply(prefix$static_data$var_decision_quali_name, function(x){
-        X_feasible()[,x, drop = TRUE] == input[[paste0(x, "_lev")]]
-      }) %>% as.data.frame() %>% apply(1, all)
-
-      X_feasible()[mask,]
-    })
-    
-    output$plot = renderPlot({
-      if (input$data_plot){
-        ggplot(data = prefix$data, aes_string(x = input$x1, y = input$x2)) +
-          geom_point(aes_string(colour = input$x_cate)) +
-          theme_bw()
-      }else{
-        ggplot(df(), aes_string(x = input$x1, y = input$x2)) +
-          geom_point(aes(colour = feasible), size = 10) +
-          theme_bw()
-      }
-    })
-    
+   
   })
 }
     
