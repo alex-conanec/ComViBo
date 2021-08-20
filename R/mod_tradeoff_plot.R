@@ -11,22 +11,7 @@
 mod_tradeoff_plot_ui <- function(id){
   ns <- NS(id)
   tagList(
-    box(
-      width = 12,
-      title = "Résultats optimisation", 
-      closable = FALSE, 
-      status = "danger", 
-      solidHeader = FALSE, 
-      collapsible = TRUE,
-      sidebar = boxSidebar(
-        id = ns("var_sel"),
-        width = 25,
-        startOpen = TRUE,
-        uiOutput(ns("choice_Y_ui")),
-        uiOutput(ns("choice_X_ui"))
-      ),
-      plotlyOutput(ns("plot"))
-    )
+    uiOutput(ns("mybox_ui"))
   )
 }
     
@@ -37,46 +22,162 @@ mod_tradeoff_plot_server <- function(id, prefix = NULL){
   moduleServer( id, function(input, output, session){
     ns <- session$ns
  
-    n_X_max = 5
-    x_var_names = c(prefix$static_data$var_decision_quali_name,
-                   prefix$static_data$var_decision_quanti_name)
-    
-    output$choice_Y_ui = renderUI({
+    output$mybox_ui = renderUI({
+      
       if (prefix$p > 2){
-        tagList(
-          tags$h4("Plot gauche"),
-          fluidRow(
-            column(width = 6,
-                   radioGroupButtons(inputId = ns("left_x"), label = "x",
-                                     choiceNames = paste0("Objectif N°", 1:prefix$p),
-                                     choiceValues = paste0("objectif_", 1:prefix$p),
-                                     justified = TRUE, direction = "vertical",
-                                     selected = "objectif_1")),
-            column(width = 6,
-                   radioGroupButtons(inputId = ns("left_y"), label = "y",
-                                     choiceNames = paste0("Objectif N°", 1:prefix$p),
-                                     choiceValues = paste0("objectif_", 1:prefix$p),
-                                     justified = TRUE, direction = "vertical",
-                                     selected = "objectif_2"))
-          ),
-          tags$h4("Plot gauche"),
-          fluidRow(
-            column(width = 6,
-                   radioGroupButtons(inputId = ns("right_x"), label = "x",
-                                     choiceNames = paste0("Objectif N°", 1:prefix$p),
-                                     choiceValues = paste0("objectif_", 1:prefix$p),
-                                     justified = TRUE, direction = "vertical",
-                                     selected = "objectif_1")),
-            column(width = 6,
-                   radioGroupButtons(inputId = ns("right_y"), label = "y",
-                                     choiceNames = paste0("Objectif N°", 1:prefix$p),
-                                     choiceValues = paste0("objectif_", 1:prefix$p),
-                                     justified = TRUE, direction = "vertical",
-                                     selected = "objectif_3"))
+        box(
+          id = ns("mybox"),
+          width = 12,
+          title = "Résultats optimisation", 
+          closable = FALSE, 
+          status = "danger", 
+          solidHeader = FALSE, 
+          collapsible = TRUE,
+          sidebar = boxSidebar(
+            id = ns("var_sel"),
+            width = 25,
+            startOpen = TRUE,
+            tags$h4("Plot gauche"),
+            fluidRow(
+              column(width = 6,
+                     radioGroupButtons(inputId = ns("left_x"), label = "x",
+                                       choiceNames = paste0("Objectif N°", 1:prefix$p),
+                                       choiceValues = paste0("objectif_", 1:prefix$p),
+                                       justified = TRUE, direction = "vertical",
+                                       selected = "objectif_1")),
+              column(width = 6,
+                     radioGroupButtons(inputId = ns("left_y"), label = "y",
+                                       choiceNames = paste0("Objectif N°", 1:prefix$p),
+                                       choiceValues = paste0("objectif_", 1:prefix$p),
+                                       justified = TRUE, direction = "vertical",
+                                       selected = "objectif_2"))
+            ),
+            tags$h4("Plot gauche"),
+            fluidRow(
+              column(width = 6,
+                     radioGroupButtons(inputId = ns("right_x"), label = "x",
+                                       choiceNames = paste0("Objectif N°", 1:prefix$p),
+                                       choiceValues = paste0("objectif_", 1:prefix$p),
+                                       justified = TRUE, direction = "vertical",
+                                       selected = "objectif_1")),
+              column(width = 6,
+                     radioGroupButtons(inputId = ns("right_y"), label = "y",
+                                       choiceNames = paste0("Objectif N°", 1:prefix$p),
+                                       choiceValues = paste0("objectif_", 1:prefix$p),
+                                       justified = TRUE, direction = "vertical",
+                                       selected = "objectif_3"))
             )
-          )
+          ),
+          plotlyOutput(ns("plot"))
+        )
+      }else{
+        box(
+          id = ns("mybox"),
+          width = 12,
+          title = "Résultats optimisation", 
+          closable = FALSE, 
+          status = "danger", 
+          solidHeader = FALSE, 
+          collapsible = TRUE,
+          plotlyOutput(ns("plot"))
+        )
       }
     })
+    
+    
+    # 
+    # 
+    # observe({
+    #   print(prefix$p)
+    #   if (prefix$p > 2){
+    #     updateBox(
+    #       id = "mybox",
+    #       options = list(
+    #         sidebar = boxSidebar(
+    #           id = ns("var_sel"),
+    #           width = 25,
+    #           startOpen = TRUE,
+    #           uiOutput(ns("choice_Y_ui"))
+    #         )
+    #       )
+    #     )
+    #     
+    #     output$choice_Y_ui = renderUI({
+    #       print("ici")
+    #       tagList(
+    #         tags$h4("Plot gauche"),
+    #         fluidRow(
+    #           column(width = 6,
+    #                  radioGroupButtons(inputId = ns("left_x"), label = "x",
+    #                                    choiceNames = paste0("Objectif N°", 1:prefix$p),
+    #                                    choiceValues = paste0("objectif_", 1:prefix$p),
+    #                                    justified = TRUE, direction = "vertical",
+    #                                    selected = "objectif_1")),
+    #           column(width = 6,
+    #                  radioGroupButtons(inputId = ns("left_y"), label = "y",
+    #                                    choiceNames = paste0("Objectif N°", 1:prefix$p),
+    #                                    choiceValues = paste0("objectif_", 1:prefix$p),
+    #                                    justified = TRUE, direction = "vertical",
+    #                                    selected = "objectif_2"))
+    #         ),
+    #         tags$h4("Plot gauche"),
+    #         fluidRow(
+    #           column(width = 6,
+    #                  radioGroupButtons(inputId = ns("right_x"), label = "x",
+    #                                    choiceNames = paste0("Objectif N°", 1:prefix$p),
+    #                                    choiceValues = paste0("objectif_", 1:prefix$p),
+    #                                    justified = TRUE, direction = "vertical",
+    #                                    selected = "objectif_1")),
+    #           column(width = 6,
+    #                  radioGroupButtons(inputId = ns("right_y"), label = "y",
+    #                                    choiceNames = paste0("Objectif N°", 1:prefix$p),
+    #                                    choiceValues = paste0("objectif_", 1:prefix$p),
+    #                                    justified = TRUE, direction = "vertical",
+    #                                    selected = "objectif_3"))
+    #         )
+    #       )
+    #     })
+    #     
+    #   }
+    # })
+    
+    # output$choice_Y_ui = renderUI({
+    #   print("ici")
+    #   if (prefix$p > 2){
+    #     tagList(
+    #       tags$h4("Plot gauche"),
+    #       fluidRow(
+    #         column(width = 6,
+    #                radioGroupButtons(inputId = ns("left_x"), label = "x",
+    #                                  choiceNames = paste0("Objectif N°", 1:prefix$p),
+    #                                  choiceValues = paste0("objectif_", 1:prefix$p),
+    #                                  justified = TRUE, direction = "vertical",
+    #                                  selected = "objectif_1")),
+    #         column(width = 6,
+    #                radioGroupButtons(inputId = ns("left_y"), label = "y",
+    #                                  choiceNames = paste0("Objectif N°", 1:prefix$p),
+    #                                  choiceValues = paste0("objectif_", 1:prefix$p),
+    #                                  justified = TRUE, direction = "vertical",
+    #                                  selected = "objectif_2"))
+    #       ),
+    #       tags$h4("Plot gauche"),
+    #       fluidRow(
+    #         column(width = 6,
+    #                radioGroupButtons(inputId = ns("right_x"), label = "x",
+    #                                  choiceNames = paste0("Objectif N°", 1:prefix$p),
+    #                                  choiceValues = paste0("objectif_", 1:prefix$p),
+    #                                  justified = TRUE, direction = "vertical",
+    #                                  selected = "objectif_1")),
+    #         column(width = 6,
+    #                radioGroupButtons(inputId = ns("right_y"), label = "y",
+    #                                  choiceNames = paste0("Objectif N°", 1:prefix$p),
+    #                                  choiceValues = paste0("objectif_", 1:prefix$p),
+    #                                  justified = TRUE, direction = "vertical",
+    #                                  selected = "objectif_3"))
+    #         )
+    #       )
+    #   }
+    # })
 
     observe({
       mask = paste0("objectif_", 1:prefix$p) == input$left_x
@@ -110,36 +211,10 @@ mod_tradeoff_plot_server <- function(id, prefix = NULL){
       )
     })
     
-    output$choice_X_ui = renderUI({
-      checkboxGroupButtons(inputId = ns("X_to_plot"),
-                           choices = x_var_names,
-                           selected = x_var_names[1:n_X_max],
-                           label = "Variable de décision",
-                           justified = TRUE,
-                           direction = "vertical")
-    })
-    
-    observe({
-      if (!is.null(input$X_to_plot)){
-        if (length(input$X_to_plot) >= n_X_max){
-          choice_to_disable = x_var_names[!x_var_names %in% input$X_to_plot]
-          updateCheckboxGroupButtons(session = session, inputId = "X_to_plot",
-                                     disabledChoices = choice_to_disable)
-        }else{
-          updateCheckboxGroupButtons(session = session, inputId = "X_to_plot",
-                                     disabledChoices = NULL)
-        }
-      }
-    })
-    
     res_p = plot(prefix$res, as_list_plot = TRUE)
     
-    x_to_diplay = reactive({ 
-      if (!is.null(input$X_to_plot)){
-        which(x_var_names %in% input$X_to_plot)
-      }else{
-          1:n_X_max
-      }
+    nrow_react = reactive({
+      length(res_p$p_x) %/% prefix$r$n_x_plot + 1
     })
     
     y_to_diplay = reactive({
@@ -167,7 +242,8 @@ mod_tradeoff_plot_server <- function(id, prefix = NULL){
       
       s_y = plotly::subplot(res_p$p_y[y_to_diplay()], titleY = TRUE,
                             titleX = TRUE, margin = c(0.02, 0.1, 0.02, 0.2))
-      s_x = plotly::subplot(res_p$p_x[x_to_diplay()], titleX = TRUE, 
+      s_x = plotly::subplot(res_p$p_x, titleX = TRUE,
+                            nrows = nrow_react(),
                             margin = c(0.02, 0.1, 0.02, 0.2))
       
       plotly::ggplotly(plotly::subplot(s_y, s_x, nrows = 2, margin = c(0.05, 0.05, 0.05, 0.2),
@@ -184,10 +260,6 @@ mod_tradeoff_plot_server <- function(id, prefix = NULL){
     
     })
     
-    
-    observeEvent(input$X_to_plot, {
-      sel(sel_store())
-    })
     observeEvent(input$left_x, {
       sel(sel_store())
     })
@@ -208,7 +280,7 @@ mod_tradeoff_plot_server <- function(id, prefix = NULL){
         sel_store(NULL)
       }
     })
-    
+
     observe({
       selected <- event_data("plotly_selected")
       if (!is.null(selected)){
