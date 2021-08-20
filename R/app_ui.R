@@ -13,6 +13,19 @@ app_ui <- function(request) {
     # useShinyjs(),
     # Leave this function for adding external resources
     golem_add_external_resources(),
+    tags$head(tags$script('
+                                var windows_dim = [0, 0];
+                                $(document).on("shiny:connected", function(e) {
+                                    windows_dim[0] = window.innerWidth;
+                                    windows_dim[1] = window.innerHeight;
+                                    Shiny.onInputChange("windows_dim", windows_dim);
+                                });
+                                $(window).resize(function(e) {
+                                    windows_dim[0] = window.innerWidth;
+                                    windows_dim[1] = window.innerHeight;
+                                    Shiny.onInputChange("windows_dim", windows_dim);
+                                });
+                            ')),
     # List the first level UI elements here 
     dashboardPage(
       options = list(sidebarExpandOnHover = TRUE),
@@ -22,17 +35,33 @@ app_ui <- function(request) {
         useShinyjs(),
         mod_objectif_form_ui("objectif_form_ui_1"),
         mod_objectif_form_ui("objectif_form_ui_2"),
+        # uiOutput("action_buttons_ui"),
         fluidRow(id = "fluidRow_button",
-          column(width = 4, actionBttn(inputId = "add_objectif", 
-                                       label = "Ajouter objectif",
-                                       style = "gradient")),
-          column(width = 4, actionBttn(inputId = "add_constraint",
-                                       label = "Ajouter contrainte",
-                                       style = "gradient")),
-          column(width = 4, actionBttn(inputId = "run_simu", 
-                                       label = "Lancer simulation",
-                                       style = "gradient"))
+                 column(width = 4, actionBttn(inputId = "add_objectif",
+                                              label = "Ajouter objectif",
+                                              style = "gradient")),
+                 column(width = 4, actionBttn(inputId = "add_constraint",
+                                              label = "Ajouter contrainte",
+                                              style = "gradient")),
+                 column(width = 4, actionBttn(inputId = "run_simu",
+                                              label = "Lancer simulation",
+                                              style = "gradient")),
+                 column(width = 4, actionBttn(inputId = "cancel",
+                                              label = "Stop simulation",
+                                              style = "gradient"))
         ),
+        
+        # fluidRow(id = "fluidRow_button",
+        #   column(width = 4, actionBttn(inputId = "add_objectif", 
+        #                                label = "Ajouter objectif",
+        #                                style = "gradient")),
+        #   column(width = 4, actionBttn(inputId = "add_constraint",
+        #                                label = "Ajouter contrainte",
+        #                                style = "gradient")),
+        #   column(width = 4, actionBttn(inputId = "run_simu", 
+        #                                label = "Lancer simulation",
+        #                                style = "gradient"))
+        # ),
         uiOutput("decision_space_ui"),
         uiOutput("tradeoff_plot_ui")
       ),
