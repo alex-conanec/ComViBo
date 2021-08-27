@@ -17,7 +17,9 @@ Imports:
     dplyr,
     testit,
     shinyjs,
-    optisure
+    optisure,
+    future,
+    promises
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 7.1.1
