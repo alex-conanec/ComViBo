@@ -7,7 +7,6 @@
 #' @noRd 
 #'
 #' @importFrom shiny NS tagList 
-#' @import plotly
 mod_tradeoff_plot_ui <- function(id){
   ns <- NS(id)
   tagList(
@@ -16,15 +15,39 @@ mod_tradeoff_plot_ui <- function(id){
 }
     
 #' tradeoff_plot Server Functions
-#'
+#' @import plotly
+#' @importFrom ggplot2 ggplot theme_bw theme coord_flip
+#' @importFrom shinyWidgets radioGroupButtons
 #' @noRd 
 mod_tradeoff_plot_server <- function(id, prefix = NULL){
   moduleServer( id, function(input, output, session){
     ns <- session$ns
  
+    y_plot_height = 300
+    x_plot_height = 250
+    ratio_plot_pareto = 1
+    x_width = y_plot_height * ratio_plot_pareto
+    
+    combi_y = as.data.frame(t(combn(colnames(prefix$res$Y), 2))) %>%
+      tibble::rownames_to_column("id") %>%
+      mutate(id = as.numeric(id))
+    
+    p_empty = ggplot(data.frame(x=rnorm(1), y=rnorm(1))) +
+      theme_bw() +
+      theme(panel.border = element_blank())
+    
+    
+    n_combi_plot = reactive({ choose(NCOL(prefix$res$Y), 2) })
+    
+    n_y = reactive({
+      min(n_combi_plot(), prefix$r$window_width %/% x_width ) 
+    })
+    
     output$mybox_ui = renderUI({
       
-      if (prefix$p > 2){
+      # if (prefix$p > 2){
+      if (n_combi_plot() > n_y()){
+        prefix$r$tradeoff_plot$n_y = n_y()
         box(
           id = ns("mybox"),
           width = 12,
@@ -37,40 +60,17 @@ mod_tradeoff_plot_server <- function(id, prefix = NULL){
             id = ns("var_sel"),
             width = 25,
             startOpen = TRUE,
-            tags$h4("Plot gauche"),
-            fluidRow(
-              column(width = 6,
-                     radioGroupButtons(inputId = ns("left_x"), label = "x",
-                                       choiceNames = paste0("Objectif N°", 1:prefix$p),
-                                       choiceValues = paste0("objectif_", 1:prefix$p),
-                                       justified = TRUE, direction = "vertical",
-                                       selected = "objectif_1")),
-              column(width = 6,
-                     radioGroupButtons(inputId = ns("left_y"), label = "y",
-                                       choiceNames = paste0("Objectif N°", 1:prefix$p),
-                                       choiceValues = paste0("objectif_", 1:prefix$p),
-                                       justified = TRUE, direction = "vertical",
-                                       selected = "objectif_2"))
-            ),
-            tags$h4("Plot gauche"),
-            fluidRow(
-              column(width = 6,
-                     radioGroupButtons(inputId = ns("right_x"), label = "x",
-                                       choiceNames = paste0("Objectif N°", 1:prefix$p),
-                                       choiceValues = paste0("objectif_", 1:prefix$p),
-                                       justified = TRUE, direction = "vertical",
-                                       selected = "objectif_1")),
-              column(width = 6,
-                     radioGroupButtons(inputId = ns("right_y"), label = "y",
-                                       choiceNames = paste0("Objectif N°", 1:prefix$p),
-                                       choiceValues = paste0("objectif_", 1:prefix$p),
-                                       justified = TRUE, direction = "vertical",
-                                       selected = "objectif_3"))
-            )
+              lapply(1:n_y(), function(i){
+                tagList(
+                  tags$h4(paste0("Plot ", i)),
+                  mod_choice_plot_axes_ui(paste0("choice_plot_axes_ui_", i))
+                )
+              })
           ),
-          plotlyOutput(ns("plot"))
+          plotlyOutput(ns("plot"), height = y_plot_height + x_plot_height * nrow_react())
         )
       }else{
+        prefix$r$tradeoff_plot$n_y = NULL
         box(
           id = ns("mybox"),
           width = 12,
@@ -79,201 +79,107 @@ mod_tradeoff_plot_server <- function(id, prefix = NULL){
           status = "danger", 
           solidHeader = FALSE, 
           collapsible = TRUE,
-          plotlyOutput(ns("plot"))
+          plotlyOutput(ns("plot"), height = 300 * nrow_react())
         )
       }
     })
     
     
-    # 
-    # 
-    # observe({
-    #   print(prefix$p)
-    #   if (prefix$p > 2){
-    #     updateBox(
-    #       id = "mybox",
-    #       options = list(
-    #         sidebar = boxSidebar(
-    #           id = ns("var_sel"),
-    #           width = 25,
-    #           startOpen = TRUE,
-    #           uiOutput(ns("choice_Y_ui"))
-    #         )
-    #       )
-    #     )
-    #     
-    #     output$choice_Y_ui = renderUI({
-    #       print("ici")
-    #       tagList(
-    #         tags$h4("Plot gauche"),
-    #         fluidRow(
-    #           column(width = 6,
-    #                  radioGroupButtons(inputId = ns("left_x"), label = "x",
-    #                                    choiceNames = paste0("Objectif N°", 1:prefix$p),
-    #                                    choiceValues = paste0("objectif_", 1:prefix$p),
-    #                                    justified = TRUE, direction = "vertical",
-    #                                    selected = "objectif_1")),
-    #           column(width = 6,
-    #                  radioGroupButtons(inputId = ns("left_y"), label = "y",
-    #                                    choiceNames = paste0("Objectif N°", 1:prefix$p),
-    #                                    choiceValues = paste0("objectif_", 1:prefix$p),
-    #                                    justified = TRUE, direction = "vertical",
-    #                                    selected = "objectif_2"))
-    #         ),
-    #         tags$h4("Plot gauche"),
-    #         fluidRow(
-    #           column(width = 6,
-    #                  radioGroupButtons(inputId = ns("right_x"), label = "x",
-    #                                    choiceNames = paste0("Objectif N°", 1:prefix$p),
-    #                                    choiceValues = paste0("objectif_", 1:prefix$p),
-    #                                    justified = TRUE, direction = "vertical",
-    #                                    selected = "objectif_1")),
-    #           column(width = 6,
-    #                  radioGroupButtons(inputId = ns("right_y"), label = "y",
-    #                                    choiceNames = paste0("Objectif N°", 1:prefix$p),
-    #                                    choiceValues = paste0("objectif_", 1:prefix$p),
-    #                                    justified = TRUE, direction = "vertical",
-    #                                    selected = "objectif_3"))
-    #         )
-    #       )
-    #     })
-    #     
-    #   }
-    # })
+    res_p = reactive({ plot(prefix$res, as_list_plot = TRUE) })
     
-    # output$choice_Y_ui = renderUI({
-    #   print("ici")
-    #   if (prefix$p > 2){
-    #     tagList(
-    #       tags$h4("Plot gauche"),
-    #       fluidRow(
-    #         column(width = 6,
-    #                radioGroupButtons(inputId = ns("left_x"), label = "x",
-    #                                  choiceNames = paste0("Objectif N°", 1:prefix$p),
-    #                                  choiceValues = paste0("objectif_", 1:prefix$p),
-    #                                  justified = TRUE, direction = "vertical",
-    #                                  selected = "objectif_1")),
-    #         column(width = 6,
-    #                radioGroupButtons(inputId = ns("left_y"), label = "y",
-    #                                  choiceNames = paste0("Objectif N°", 1:prefix$p),
-    #                                  choiceValues = paste0("objectif_", 1:prefix$p),
-    #                                  justified = TRUE, direction = "vertical",
-    #                                  selected = "objectif_2"))
-    #       ),
-    #       tags$h4("Plot gauche"),
-    #       fluidRow(
-    #         column(width = 6,
-    #                radioGroupButtons(inputId = ns("right_x"), label = "x",
-    #                                  choiceNames = paste0("Objectif N°", 1:prefix$p),
-    #                                  choiceValues = paste0("objectif_", 1:prefix$p),
-    #                                  justified = TRUE, direction = "vertical",
-    #                                  selected = "objectif_1")),
-    #         column(width = 6,
-    #                radioGroupButtons(inputId = ns("right_y"), label = "y",
-    #                                  choiceNames = paste0("Objectif N°", 1:prefix$p),
-    #                                  choiceValues = paste0("objectif_", 1:prefix$p),
-    #                                  justified = TRUE, direction = "vertical",
-    #                                  selected = "objectif_3"))
-    #         )
-    #       )
-    #   }
-    # })
-
-    observe({
-      mask = paste0("objectif_", 1:prefix$p) == input$left_x
-      updateRadioGroupButtons(
-        session = session, inputId = "left_y",
-        disabledChoices = paste0("objectif_", 1:prefix$p)[mask]
-      )
-    })
-
-    observe({
-      mask = paste0("objectif_", 1:prefix$p) == input$left_y
-      updateRadioGroupButtons(
-        session = session, inputId = "left_x",
-        disabledChoices = paste0("objectif_", 1:prefix$p)[mask]
-      )
-    })
-
-    observe({
-      mask = paste0("objectif_", 1:prefix$p) == input$right_y
-      updateRadioGroupButtons(
-        session = session, inputId = "right_x",
-        disabledChoices = paste0("objectif_", 1:prefix$p)[mask]
-      )
-    })
-
-    observe({
-      mask = paste0("objectif_", 1:prefix$p) == input$right_x
-      updateRadioGroupButtons(
-        session = session, inputId = "right_y",
-        disabledChoices = paste0("objectif_", 1:prefix$p)[mask]
-      )
-    })
-    
-    res_p = plot(prefix$res, as_list_plot = TRUE)
     
     nrow_react = reactive({
-      length(res_p$p_x) %/% prefix$r$n_x_plot + 1
+      NCOL(prefix$res$X) %/% prefix$r$n_x_plot + 1
+    })
+
+    y_to_diplay = reactive({
+      if (n_combi_plot() > n_y()){
+        req(prefix$r$tradeoff_plot$choice_plot_axes$y[[n_y()]])
+
+        sapply(1:n_y(), function(i){
+          combi_y %>% filter(V1 == prefix$r$tradeoff_plot$choice_plot_axes$x[[i]] &
+                            V2 == prefix$r$tradeoff_plot$choice_plot_axes$y[[i]] |
+                            V2 == prefix$r$tradeoff_plot$choice_plot_axes$x[[i]] &
+                            V1 == prefix$r$tradeoff_plot$choice_plot_axes$y[[i]]) %>%
+            pull(id)
+        })
+        
+        
+      }else{
+        1:n_combi_plot()
+      }
     })
     
-    y_to_diplay = reactive({
-      if (!is.null(input$right_x)){
-        df = as.data.frame(t(res_p$combi)) %>%
-          tibble::rownames_to_column("id") %>%
-          mutate(id = as.numeric(id))
-
-        c(
-          df %>% filter(V1 == input$left_x & V2 == input$left_y |
-                          V2 == input$left_x & V1 == input$left_y) %>% pull(id),
-          df %>% filter(V1 == input$right_x & V2 == input$right_y |
-                          V2 == input$right_x & V1 == input$right_y) %>% pull(id)
-        )
+    respect_order_asked = reactive({
+      req(y_to_diplay())
+      
+      if (n_y() < NROW(combi_y)){
+        sapply(1:n_y(), function(i){
+          combi_y[y_to_diplay()[i], "V1"] == prefix$r$tradeoff_plot$choice_plot_axes$x[[i]]
+        })
       }else{
-        1
+        rep(TRUE, n_y())
       }
+      
     })
     
     sel = reactiveVal() 
     sel_store = reactiveVal()
     
+    
+    prop_plot_y = reactive({
+      1 - x_plot_height * nrow_react()/(x_plot_height * nrow_react() + y_plot_height ) 
+    })
+    
+    vide_y_prop = reactive({
+      (prefix$r$window_width - n_y()*x_width) / (2*prefix$r$window_width)
+    })
+    
+    width_y_prop = reactive({
+      (1-2*vide_y_prop()) / n_y()
+    })
+    
     output$plot = renderPlotly({
       res_p = plot(prefix$res, as_list_plot = TRUE)
+
+      p_y = lapply(1:n_y(), function(i){
+        if (respect_order_asked()[i]){
+          res_p$p_y[[y_to_diplay()[i]]]
+        }else{
+          res_p$p_y[[y_to_diplay()[i]]] + coord_flip()
+        }
+      })
+
+
+      s_y = subplot(c(list(p_empty), p_y, list(p_empty)),
+                            titleY = TRUE, titleX = TRUE, nrows = 1,
+                            widths = c(vide_y_prop(),
+                                       rep(width_y_prop(), n_y()),
+                                       vide_y_prop()),
+                            margin = c(0.02, 0.1, 0.02, 0.02))
       
-      s_y = plotly::subplot(res_p$p_y[y_to_diplay()], titleY = TRUE,
-                            titleX = TRUE, margin = c(0.02, 0.1, 0.02, 0.2))
-      s_x = plotly::subplot(res_p$p_x, titleX = TRUE,
+      
+      s_x = subplot(res_p$p_x, titleX = TRUE,
                             nrows = nrow_react(),
-                            margin = c(0.02, 0.1, 0.02, 0.2))
-      
-      plotly::ggplotly(plotly::subplot(s_y, s_x, nrows = 2, margin = c(0.05, 0.05, 0.05, 0.2),
-                                       titleY = TRUE, titleX = TRUE)) %>%
-        plotly::highlight(defaultValues = sel(),
+                            margin = c(0.02, 0.1, 0.02, 0.3/nrow_react()))
+
+      ggplotly(subplot(s_y, s_x, nrows = 2,
+                                       margin = c(0.05, 0.05, 0.05,
+                                                  0.2/nrow_react()),
+                                       titleY = TRUE, titleX = TRUE,
+                                       heights = c(prop_plot_y(), 1-prop_plot_y())
+                                       )) %>%
+        highlight(defaultValues = sel(),
                           on = "plotly_selected", off = "plotly_deselect",
-                          color = "red", persistent = FALSE) %>%
-        plotly::layout(annotations = list(
-          list(x = 0 , y = 1.05, text = "Front de Pareto",
-               showarrow = F, xref='paper', yref='paper'),
-          list(x = 0 , y = 0.48, text = "Decision solution",
-               showarrow = F, xref='paper', yref='paper'))
-        ) 
-    
+                          color = "red", persistent = FALSE)
+
     })
     
-    observeEvent(input$left_x, {
+
+    observeEvent(prefix$r$tradeoff_plot$choice_plot_axes$changed,{
       sel(sel_store())
     })
-    observeEvent(input$left_y, {
-      sel(sel_store())
-    })
-    observeEvent(input$right_x, {
-      sel(sel_store())
-    })
-    observeEvent(input$right_y, {
-      sel(sel_store())
-    })
-    
-    
+
     observe({
       deselected <- event_data("plotly_deselect")
       if (!is.null(deselected)){
@@ -284,9 +190,12 @@ mod_tradeoff_plot_server <- function(id, prefix = NULL){
     observe({
       selected <- event_data("plotly_selected")
       if (!is.null(selected)){
-        sel_store(selected$key)
+        selected = selected$key
+        sel_store(selected[!is.na(selected)])
       }
     })
+    
+    prefix$r
     
   })
 }

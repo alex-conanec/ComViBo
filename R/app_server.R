@@ -6,7 +6,8 @@
 #' @importFrom magrittr %>% 
 #' @importFrom promises %...>% catch
 #' @importFrom future plan multisession future
-#' @import optisure  
+#' @import optisure 
+#' @importFrom shinyjs toggle show enable disable runjs
 #' @noRd
 app_server <- function( input, output, session ) {
   
@@ -23,7 +24,7 @@ app_server <- function( input, output, session ) {
   id_notif = reactiveVal()
   path_tracking = "tracking.RDS"
   N_tracking = 1 + 1 + TT + 3 
-  size_by_plot = 100
+  size_by_plot = 200
 
   
   static_data = list(
@@ -62,15 +63,22 @@ app_server <- function( input, output, session ) {
       constraint_function = NULL,
       value = NULL,
       filled = NULL,
-      mask = NULL)
+      mask = NULL),
+    tradeoff_plot = reactiveValues(
+      n_y = NULL,
+      choice_plot_axes = reactiveValues(
+        x = NULL, 
+        y = NULL,
+        changed = FALSE)
+      )
     )
 
-  observe({ r$n_x_plot = input$windows_dim[1] %/% size_by_plot })
-
   observe({
-    req(r$n_x_plot)
-    print(r$n_x_plot)
+    print(input$windows_dim[1])
+    r$window_width = input$windows_dim[1]
+    r$n_x_plot = input$windows_dim[1] %/% size_by_plot 
   })
+
   
   r = mod_objectif_form_server("objectif_form_ui_1",
                                prefix = list(id = 1, r = r,
@@ -86,11 +94,6 @@ app_server <- function( input, output, session ) {
       show("add_constraint")
       show("run_simu")
       toggle("cancel")
-    }else{
-      toggle("add_objectif")
-      toggle("add_constraint")
-      toggle("run_simu")
-      show("cancel")
     }
   })
   
@@ -153,20 +156,20 @@ app_server <- function( input, output, session ) {
     }
   }) 
   
-
+  
   #disable/enable the run_simu button if objectif and constraint are filled correctly
   observe({
     if (sum(r$objectif_form$formule_ok[!r$objectif_form$closed]) <
         sum(!r$objectif_form$closed)){
-      shinyjs::disable("run_simu")
+      disable("run_simu")
     }else{
       if (is.null(r$constraint_form$closed)){
-        shinyjs::enable("run_simu")
+        enable("run_simu")
       }else{
         if (any(!r$constraint_form$filled[!r$constraint_form$closed])){
-          shinyjs::disable("run_simu")
+          disable("run_simu")
         }else{
-          shinyjs::enable("run_simu")
+          enable("run_simu")
         }
       }
     }
@@ -183,12 +186,12 @@ app_server <- function( input, output, session ) {
   })
   
   
-  #to prevent time out
-  autoInvalidate1 <- reactiveTimer(1000)
-  observe({
-    autoInvalidate1()
-    cat("---\n")
-  })
+  # #to prevent time out
+  # autoInvalidate1 <- reactiveTimer(1000)
+  # observe({
+  #   autoInvalidate1()
+  #   cat("---\n")
+  # })
   
   
 
@@ -199,38 +202,42 @@ app_server <- function( input, output, session ) {
     
     id_notif(NULL)
     running(TRUE)
-    
+
+    toggle("add_objectif")
+    toggle("add_constraint")
+    toggle("run_simu")
+    show("cancel")
+
     if (first_time_running()){
       first_time_running(FALSE)
       plan(multisession)
     }
-    
 
     tracking = list()
     tracking[[1]] = "begenning"
     saveRDS(tracking, path_tracking)
-    
+
     data = isolate(r$data)
     mask = as.data.frame(isolate(r$constraint_form$mask))
     if (NCOL(mask) > 0){
       mask_obj = as.data.frame(isolate(r$objectif_form$mask)) %>% apply(1, all)
       mask = mask %>% apply(1, all)
       data = data[mask[mask_obj],]
-      mask_pr_Y = mask_obj & mask 
+      mask_pr_Y = mask_obj & mask
     }else{
-      mask_pr_Y = as.data.frame(isolate(r$objectif_form$mask)) %>% apply(1, all) 
+      mask_pr_Y = as.data.frame(isolate(r$objectif_form$mask)) %>% apply(1, all)
     }
     print(NROW(data))
-    
+
     Y = as.data.frame(isolate(r$objectif_form$Y_calc))[mask_pr_Y,]
     colnames(Y) = paste0("objectif_", 1:NCOL(Y))
-    
+
     X = data[,static_data$var_decision_idx]
     is_fac = !sapply(X, is.numeric)
     for (i in which(is_fac)){
       X[,i] = droplevels(X[,i,T])
     }
-    
+
     res(NULL)
     thread = future({
       optisure(X = X,
@@ -246,8 +253,8 @@ app_server <- function( input, output, session ) {
                N = N,
                path_tracking = path_tracking,
                seed = 123)
-    }) %...>% res() 
-  
+    }) %...>% res()
+
     thread <- catch(thread,
                     function(e){
                       print(e$message)
@@ -256,7 +263,7 @@ app_server <- function( input, output, session ) {
 
     NULL
   })
-
+  
   # notif running status
   notif_update <- reactiveTimer(1100)
   observe({
@@ -264,7 +271,7 @@ app_server <- function( input, output, session ) {
       tracking = readRDS(path_tracking)
       showNotification(id = id_notif(),
                        paste0("Running: ", tracking[[length(tracking)]],
-                              " --> ", 
+                              " --> ",
                               round(100 * length(tracking) / N_tracking),
                               "%"),
                        duration = 1,
@@ -272,7 +279,7 @@ app_server <- function( input, output, session ) {
                        type = "message")
     }
   })
-  
+
   observeEvent(notif_update(), {
     if (running()){
       old_id_notif = id_notif()
@@ -283,7 +290,7 @@ app_server <- function( input, output, session ) {
       id_notif(paste0("notif_", runif(1)))
     }
   })
-  
+
   observe({
     req(res())
     running(FALSE)
@@ -291,15 +298,15 @@ app_server <- function( input, output, session ) {
     #   document.getElementById("decision_space_ui").scrollIntoView();
     # ')
   })
-  
+
   observeEvent(input$cancel, {
     tracking = readRDS(path_tracking)
     tracking[[length(tracking)+1]] = "stop"
     saveRDS(tracking, path_tracking)
   })
-  
-  
-  #render decision espace 
+
+
+  #render decision espace
   output$decision_space_ui = renderUI({
     req(res())
     mod_decision_space_ui("decision_space_ui_1")
@@ -307,26 +314,40 @@ app_server <- function( input, output, session ) {
 
   observe({
     req(res())
+    # saveRDS(res(), "res_2p.RDS")
+    # saveRDS(res(), "res_3p.RDS")
+    res = readRDS("res_2p.RDS")
     mod_decision_space_server("decision_space_ui_1",
                               prefix = list(r = r, static_data = static_data,
                                             data = data, res = res()))
     })
-  
 
 
 
-  #render plot res
-  output$tradeoff_plot_ui = renderUI({
+
+    #render plot res
+    output$tradeoff_plot_ui = renderUI({
     req(res())
     mod_tradeoff_plot_ui("tradeoff_plot_ui_1")
   })
-  
+
   observe({
     req(res())
     mod_tradeoff_plot_server("tradeoff_plot_ui_1",
                              prefix = list(res = res(), static_data = static_data,
                                            r = r,
                                            p = sum(!isolate(r$objectif_form$closed))))
+  })
+  
+  #launch choice_plot_axes_ui modules
+  observe({
+    if (!is.null(r$tradeoff_plot$n_y)){
+      for (i in 1:r$tradeoff_plot$n_y){
+        r = mod_choice_plot_axes_server(paste0("choice_plot_axes_ui_", i),
+                                        prefix = list(r = r, id = i,
+                                                      p = sum(!isolate(r$objectif_form$closed)) ))
+      }
+    }
   })
   
 }

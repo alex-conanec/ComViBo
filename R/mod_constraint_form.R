@@ -157,6 +157,22 @@ mod_constraint_form_server <- function(id, prefix = NULL){
       }
     })
     
+    # observe({
+    #   if (prefix$r$constraint_form$filled[prefix$id]){
+    #     if (input$operator %in% c("in", "not in")){
+    #       f = function(X, var, lev){
+    #           X[,var] %in% lev
+    #       }
+    #       formals(f)$var = paste0("`", input$var_deci, "`")
+    #       formals(f)$lev = input$value
+    #       
+    #       prefix$r$constraint_form$constraint_function[[prefix$id]] = f
+    #     }else{
+    #       NULL #faudrait pourtant faire quelque chose si formule il y a. Et verifier si formule est correct
+    #     }
+    #   }
+    # })
+    
     prefix$r
     
   })

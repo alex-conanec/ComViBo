@@ -7,7 +7,7 @@
 #' @noRd 
 #'
 #' @importFrom shiny NS tagList
-#' @import shinyjs
+#' @importFrom shinyWidgets radioGroupButtons
 mod_objectif_form_ui <- function(id){
   ns <- NS(id)
   tagList(
@@ -18,16 +18,19 @@ mod_objectif_form_ui <- function(id){
       width = 12,
       closable = TRUE,
       collapsible = TRUE,
-      tagList(
-        uiOutput(ns("indicators_ui")),
-        textInput(inputId = ns("formula"), label = "Formule", value = ""),
-        radioGroupButtons(inputId = ns("sens"), label = "",
-          choices = c("Max", "Min"), selected = "Max", 
-          justified = TRUE),
-        radioGroupButtons(inputId = ns("uncertainty_choice"), label = "",
-                          choices = c("Quantile", "Espérance"), 
-                          selected = "Quantile", justified = TRUE),
-        uiOutput(ns("quantile_choice"))
+      fluidRow(
+        column(width = 6, uiOutput(ns("indicators_ui")) ),
+        column(width = 6,
+               textInput(inputId = ns("formula"), label = "Formule", value = "")),
+        column(width = 6, 
+               radioGroupButtons(inputId = ns("sens"), label = "",
+                                 choices = c("Max", "Min"), selected = "Max",
+                                 justified = TRUE)),
+        column(width = 6,
+               radioGroupButtons(inputId = ns("uncertainty_choice"), label = "",
+                                 choices = c("Quantile", "Espérance"), 
+                                 selected = "Quantile", justified = TRUE)),
+        uiOutput(ns("quantile_choice")) 
       )
       
       
@@ -38,7 +41,8 @@ mod_objectif_form_ui <- function(id){
 #' objectif_form Server Functions
 #' 
 #' @import shinydashboardPlus
-#' @import shinyjs
+#' @importFrom shinyjs runjs
+#' @importFrom shinyWidgets radioGroupButtons pickerInput updateRadioGroupButtons
 #' @noRd 
 mod_objectif_form_server <- function(id, prefix = NULL){
   
@@ -132,11 +136,13 @@ mod_objectif_form_server <- function(id, prefix = NULL){
 
       if (input$uncertainty_choice == "Quantile"){
         tagList(
-          radioGroupButtons(inputId = ns("global_quantile"), label = "",
-                            choices = c("Globale", "Individuel"),
-                            selected = "Globale", justified = TRUE),
-          sliderInput(inputId = ns("tau"), label = "Risque", min = 0, max = 1,
-                      value = 0.5, step = 0.01)
+          column(width = 6,
+                 radioGroupButtons(inputId = ns("global_quantile"), label = "",
+                                   choices = c("Globale", "Individuel"),
+                                   selected = "Globale", justified = TRUE)),
+          column(width = 6,
+                 sliderInput(inputId = ns("tau"), label = "Risque", min = 0, max = 1,
+                             value = 0.5, step = 0.01))
         )
       }
     })

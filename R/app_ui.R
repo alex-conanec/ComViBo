@@ -3,10 +3,10 @@
 #' @param request Internal parameter for `{shiny}`. 
 #'     DO NOT REMOVE.
 #' @import shiny
-#' @import shinydashboard
+#' @importFrom shinydashboard dashboardBody
 #' @import shinydashboardPlus
-#' @import shinyWidgets
-#' @import shinyjs
+#' @importFrom shinyWidgets actionBttn
+#' @importFrom shinyjs hidden useShinyjs
 #' @noRd
 app_ui <- function(request) {
   tagList(
@@ -35,7 +35,6 @@ app_ui <- function(request) {
         useShinyjs(),
         mod_objectif_form_ui("objectif_form_ui_1"),
         mod_objectif_form_ui("objectif_form_ui_2"),
-        # uiOutput("action_buttons_ui"),
         fluidRow(id = "fluidRow_button",
                  column(width = 4, actionBttn(inputId = "add_objectif",
                                               label = "Ajouter objectif",
@@ -46,22 +45,13 @@ app_ui <- function(request) {
                  column(width = 4, actionBttn(inputId = "run_simu",
                                               label = "Lancer simulation",
                                               style = "gradient")),
+                 # column(width = 4, hidden(actionBttn(inputId = "cancel",
+                 #                              label = "Stop simulation",
+                 #                              style = "gradient")))
                  column(width = 4, actionBttn(inputId = "cancel",
-                                              label = "Stop simulation",
-                                              style = "gradient"))
+                                                     label = "Stop simulation",
+                                                     style = "gradient"))
         ),
-        
-        # fluidRow(id = "fluidRow_button",
-        #   column(width = 4, actionBttn(inputId = "add_objectif", 
-        #                                label = "Ajouter objectif",
-        #                                style = "gradient")),
-        #   column(width = 4, actionBttn(inputId = "add_constraint",
-        #                                label = "Ajouter contrainte",
-        #                                style = "gradient")),
-        #   column(width = 4, actionBttn(inputId = "run_simu", 
-        #                                label = "Lancer simulation",
-        #                                style = "gradient"))
-        # ),
         uiOutput("decision_space_ui"),
         uiOutput("tradeoff_plot_ui")
       ),

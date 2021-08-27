@@ -6,8 +6,7 @@
 #'
 #' @noRd 
 #'
-#' @importFrom shiny NS tagList 
-#' @import ggplot2
+#' @importFrom shiny NS tagList
 mod_decision_space_ui <- function(id){
   ns <- NS(id)
   tagList(
@@ -18,13 +17,14 @@ mod_decision_space_ui <- function(id){
       status = "danger", 
       solidHeader = FALSE, 
       collapsible = TRUE,
-      plotlyOutput(ns("plot"))
+      uiOutput(ns("plot_ui"))
     )
   )
 }
     
 #' decision_space Server Functions
-#'
+
+#' @import plotly
 #' @noRd 
 mod_decision_space_server <- function(id, prefix = NULL){
   moduleServer( id, function(input, output, session){
@@ -37,13 +37,18 @@ mod_decision_space_server <- function(id, prefix = NULL){
       length(res_p) %/% prefix$r$n_x_plot + 1
     })
     
+    
+    output$plot_ui = renderUI({
+      plotlyOutput(ns("plot"), height = 300 * nrow_react())
+    })
+    
     output$plot = renderPlotly({
       
-      plotly::ggplotly(plotly::subplot(res_p, titleX = TRUE,
-                                       nrows = nrow_react(),
-                                       margin = c(0.05, 0.05, 0.05, 0.2))) %>%
-        plotly::highlight(on = "plotly_selected", off= "plotly_deselect",
-                          color = "red")
+      ggplotly(subplot(res_p, titleX = TRUE,
+                       nrows = nrow_react(),
+                       margin = c(0.05, 0.05, 0.05, 0.05))) %>%
+        highlight(on = "plotly_selected", off= "plotly_deselect",
+                  color = "red")
     })
    
   })
