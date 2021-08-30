@@ -6,7 +6,7 @@
 #' @importFrom magrittr %>% 
 #' @importFrom promises %...>% catch
 #' @importFrom future plan multisession future
-#' @import optisure 
+#' @import MOOVaR 
 #' @importFrom shinyjs toggle show enable disable runjs
 #' @noRd
 app_server <- function( input, output, session ) {

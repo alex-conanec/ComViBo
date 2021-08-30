@@ -1,7 +1,7 @@
-Package: CDCapp
-Title: CDCapp
+Package: ComViBo
+Title: ComViBo
 Version: 0.0.0.9000
-Authors@R: person('AUTHOR_FIRST', 'AUTHOR_LAST', email = 'AUTHOR@MAIL.COM', role = c('cre', 'aut'))
+Authors@R: person('Alexandre', 'Conanec', email = 'alexandreconanec@gmail.com', role = c('cre', 'aut'))
 Description: PKG_DESC.
 License: What license is it under?
 Imports: 
@@ -17,7 +17,7 @@ Imports:
     dplyr,
     testit,
     shinyjs,
-    optisure,
+    MOOVaR,
     future,
     promises
 Encoding: UTF-8
