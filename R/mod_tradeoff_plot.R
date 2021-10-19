@@ -15,9 +15,10 @@ mod_tradeoff_plot_ui <- function(id){
 }
     
 #' tradeoff_plot Server Functions
-#' @import plotly
-#' @importFrom ggplot2 ggplot theme_bw theme coord_flip
+#' @importFrom plotly ggplotly subplot highlight event_data plotlyOutput
+#' @importFrom ggplot2 ggplot theme_bw theme coord_flip element_blank
 #' @importFrom shinyWidgets radioGroupButtons
+#' @importFrom dplyr mutate
 #' @noRd 
 mod_tradeoff_plot_server <- function(id, prefix = NULL){
   moduleServer( id, function(input, output, session){
@@ -28,9 +29,19 @@ mod_tradeoff_plot_server <- function(id, prefix = NULL){
     ratio_plot_pareto = 1
     x_width = y_plot_height * ratio_plot_pareto
     
-    combi_y = as.data.frame(t(combn(colnames(prefix$res$Y), 2))) %>%
+    Y_names = isolate(prefix$r$objectif_form$names)
+    
+    # combi_y = as.data.frame(t(combn(colnames(prefix$res$Y), 2))) %>%
+    #   tibble::rownames_to_column("id") %>%
+    #   mutate(id = as.numeric(id))
+    combi_y = as.data.frame(t(combn(Y_names, 2))) %>%
       tibble::rownames_to_column("id") %>%
       mutate(id = as.numeric(id))
+    
+    # combi_y = combi_y %>% left_join(static_data$choice_names, c("V1"="choice_name"))
+    # combi_y = combi_y %>% left_join(static_data$choice_names, c("V2"="choice_name"))
+    
+    colnames(combi_y)[-1] = c("x", "y")
     
     p_empty = ggplot(data.frame(x=rnorm(1), y=rnorm(1))) +
       theme_bw() +
@@ -85,7 +96,7 @@ mod_tradeoff_plot_server <- function(id, prefix = NULL){
     })
     
     
-    res_p = reactive({ plot(prefix$res, as_list_plot = TRUE) })
+    # res_p = reactive({ plot(prefix$res, as_list_plot = TRUE) })
     
     
     nrow_react = reactive({
@@ -97,10 +108,10 @@ mod_tradeoff_plot_server <- function(id, prefix = NULL){
         req(prefix$r$tradeoff_plot$choice_plot_axes$y[[n_y()]])
 
         sapply(1:n_y(), function(i){
-          combi_y %>% filter(V1 == prefix$r$tradeoff_plot$choice_plot_axes$x[[i]] &
-                            V2 == prefix$r$tradeoff_plot$choice_plot_axes$y[[i]] |
-                            V2 == prefix$r$tradeoff_plot$choice_plot_axes$x[[i]] &
-                            V1 == prefix$r$tradeoff_plot$choice_plot_axes$y[[i]]) %>%
+          combi_y %>% filter(x == prefix$r$tradeoff_plot$choice_plot_axes$x[[i]] &
+                            y == prefix$r$tradeoff_plot$choice_plot_axes$y[[i]] |
+                            y == prefix$r$tradeoff_plot$choice_plot_axes$x[[i]] &
+                            x == prefix$r$tradeoff_plot$choice_plot_axes$y[[i]]) %>%
             pull(id)
         })
         
@@ -115,7 +126,7 @@ mod_tradeoff_plot_server <- function(id, prefix = NULL){
       
       if (n_y() < NROW(combi_y)){
         sapply(1:n_y(), function(i){
-          combi_y[y_to_diplay()[i], "V1"] == prefix$r$tradeoff_plot$choice_plot_axes$x[[i]]
+          combi_y$x[y_to_diplay()[i]] == prefix$r$tradeoff_plot$choice_plot_axes$x[[i]]
         })
       }else{
         rep(TRUE, n_y())
@@ -142,6 +153,12 @@ mod_tradeoff_plot_server <- function(id, prefix = NULL){
     output$plot = renderPlotly({
       res_p = plot(prefix$res, as_list_plot = TRUE)
 
+      for (i in 1:length(res_p$p_y)){
+        res_p$p_y[[i]] = res_p$p_y[[i]] + xlab(as.character(combi_y$x[i])) +
+          ylab(as.character(combi_y$y[i]))
+      }
+      
+      
       p_y = lapply(1:n_y(), function(i){
         if (respect_order_asked()[i]){
           res_p$p_y[[y_to_diplay()[i]]]
@@ -158,6 +175,11 @@ mod_tradeoff_plot_server <- function(id, prefix = NULL){
                                        vide_y_prop()),
                             margin = c(0.02, 0.1, 0.02, 0.02))
       
+      x_names = as.character(prefix$static_data$choice_names[
+        prefix$static_data$var_decision_idx, 2, drop = TRUE])
+      for (i in 1:length(res_p$p_x)){
+        res_p$p_x[[i]] = res_p$p_x[[i]] + xlab(x_names[i]) 
+      }
       
       s_x = subplot(res_p$p_x, titleX = TRUE,
                             nrows = nrow_react(),

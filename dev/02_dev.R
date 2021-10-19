@@ -32,6 +32,7 @@ golem::add_module( name = "constraint_form" )
 golem::add_module( name = "decision_space" ) 
 golem::add_module( name = "tradeoff_plot" ) 
 golem::add_module( name = "choice_plot_axes" ) 
+golem::add_module( name = "beta_plot" ) 
 
 
 ## Add helper functions ----

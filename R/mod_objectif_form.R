@@ -22,6 +22,9 @@ mod_objectif_form_ui <- function(id){
         column(width = 6, uiOutput(ns("indicators_ui")) ),
         column(width = 6,
                textInput(inputId = ns("formula"), label = "Formule", value = "")),
+        column(width = 12,
+               textInput(inputId = ns("name"), label = "Nom de l'objectif",
+                         value = "")),
         column(width = 6, 
                radioGroupButtons(inputId = ns("sens"), label = "",
                                  choices = c("Max", "Min"), selected = "Max",
@@ -81,7 +84,11 @@ mod_objectif_form_server <- function(id, prefix = NULL){
     #make the indicator picker with the given list of item
     output$indicators_ui = renderUI({
       pickerInput(inputId = ns("indicators"), label = "Indicateurs",
-                  choices = colnames(prefix$static_data$data)[prefix$static_data$indicators_idx],
+                  # choices = colnames(prefix$static_data$data)[prefix$static_data$indicators_idx],
+                  choices = prefix$static_data$choice_names[prefix$static_data$indicators_idx, 1],
+                  choicesOpt = list(
+                    content = prefix$static_data$choice_names[prefix$static_data$indicators_idx, 2]
+                  ),
                   multiple = TRUE)
     })
     
@@ -90,6 +97,14 @@ mod_objectif_form_server <- function(id, prefix = NULL){
       updateTextInput(session = session, inputId = "formula",
                       value = paste(paste0("`", input$indicators, "`"),
                                     collapse = " + "))
+    })
+    
+    observe({
+      indicators = prefix$static_data$choice_names %>%
+        filter(names %in% input$indicators) %>%
+        pull(choice_name)
+      updateTextInput(session = session, inputId = "name",
+                      value = paste(indicators, collapse = "_et_"))
     })
     
     #function checking the formula
@@ -131,6 +146,12 @@ mod_objectif_form_server <- function(id, prefix = NULL){
       }
     })
     
+    #return the allowed dependance for this objective
+    observe({
+      prefix$r$objectif_form$allowed_dependence[[as.character(prefix$id)]] =
+        as.data.frame(apply(prefix$static_data$allowed_dependence[,input$indicators,drop = FALSE], 1, all))
+    })
+    
     # render global or individual button if uncertainty_choice == "Quantile"
     output$quantile_choice = renderUI({
 
@@ -164,6 +185,16 @@ mod_objectif_form_server <- function(id, prefix = NULL){
       if (!is.null(input$sens)){
         prefix$r$objectif_form$sens[prefix$id] = input$sens
       }
+    })
+    
+    observe({
+      # req(input$name)
+      # prefix$r$objectif_form$names[prefix$id] = 
+      #   prefix$static_data$choice_names %>% filter(names == input$name) %>%
+      #   pull(choice_name)
+      
+      req(input$name)
+      prefix$r$objectif_form$names[prefix$id] = input$name
     })
     
     observe({
@@ -207,14 +238,14 @@ mod_objectif_form_server <- function(id, prefix = NULL){
     #create a mask depending on na value on he indicators selected
     observe({
       if (!is.null(input$indicators)){
-        prefix$r$objectif_form$mask[[prefix$id]] =
+        prefix$r$objectif_form$mask[[as.character(prefix$id)]] =
           sapply(input$indicators, function(x){
             col_name = colnames(prefix$static_data$data) == x
             !is.na(prefix$static_data$data[,col_name])
           }) %>% apply(1, all)
       }else{
-        prefix$r$objectif_form$mask[[prefix$id]] = NULL
-      }   
+        prefix$r$objectif_form$mask[[as.character(prefix$id)]] = NULL
+      }
     })
 
     prefix$r

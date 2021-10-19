@@ -24,17 +24,18 @@ mod_decision_space_ui <- function(id){
     
 #' decision_space Server Functions
 
-#' @import plotly
+#' @importFrom plotly plotlyOutput renderPlotly highlight_key ggplotly subplot
+#' @importFrom ggplot2 ggplot theme_bw theme coord_flip element_blank geom_text geom_point aes_string aes
 #' @noRd 
 mod_decision_space_server <- function(id, prefix = NULL){
   moduleServer( id, function(input, output, session){
     ns <- session$ns
  
-    
-    res_p = plot(prefix$res$X_space_csrt, as_list_plot = TRUE)
+  
+    # res_p = plot(prefix$res$X_space_csrt, as_list_plot = TRUE)
     
     nrow_react = reactive({
-      length(res_p) %/% prefix$r$n_x_plot + 1
+      NCOL(prefix$res$X0) %/% prefix$r$n_x_plot + 1
     })
     
     
@@ -44,7 +45,41 @@ mod_decision_space_server <- function(id, prefix = NULL){
     
     output$plot = renderPlotly({
       
-      ggplotly(subplot(res_p, titleX = TRUE,
+      #plot
+      df = prefix$res$X0
+      # if (!is.null(prefix$res$g)){
+      #   mask = lapply(prefix$res$g, function(gg){
+      #     gg(df)
+      #   }) %>% bind_cols() #marche pas a mon avis
+      #   df = df[mask,]
+      # }
+      
+      df$id = 1:NROW(df)
+      
+      dd = highlight_key(df, ~id)
+      lapply(colnames(df)[-NCOL(df)], function(X_i){
+        if (is.numeric(df[, X_i,T]) | is.integer(df[, X_i,T])){
+          p = ggplot(dd) +
+            geom_point(aes_string(x = 1, y = X_i)) +
+            xlab(prefix$static_data$choice_names %>% filter(names == X_i) %>% 
+                   pull(choice_name) %>% as.character()) +
+            theme(axis.text.x = element_blank(),
+                  axis.ticks.x = element_blank())
+        }else{
+          p = ggplot(dd) + geom_text(
+            aes(x = 1, y = as.numeric(!! rlang::sym(X_i)),
+                label = !! rlang::sym(X_i))) +
+            # ylim(0.5, nlevels(df[, X_i]) + 0.5) +
+            xlab(prefix$static_data$choice_names %>% filter(names == X_i) %>%
+                   pull(choice_name) %>% as.character()) +
+            theme(axis.text = element_blank(),
+                  axis.ticks = element_blank(),
+                  axis.title.y = element_blank())
+        }
+        p + theme_bw()
+      }) -> p_x
+      
+      ggplotly(subplot(p_x, titleX = TRUE,
                        nrows = nrow_react(),
                        margin = c(0.05, 0.05, 0.05, 0.05))) %>%
         highlight(on = "plotly_selected", off= "plotly_deselect",

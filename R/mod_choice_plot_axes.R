@@ -22,39 +22,46 @@ mod_choice_plot_axes_server <- function(id, prefix = NULL){
   moduleServer( id, function(input, output, session){
     ns <- session$ns
  
+    Y_names = isolate(prefix$r$objectif_form$names)
     output$radio_buttons_ui = renderUI({
       fluidRow(
         column(width = 6,
                radioGroupButtons(inputId = ns("x"), label = "x",
-                                 choiceNames = paste0("Obj N°", 1:prefix$p),
-                                 choiceValues = paste0("objectif_", 1:prefix$p),
+                                 choices = Y_names,
+                                 # choiceNames = paste0("Obj N°", 1:prefix$p),
+                                 # choiceValues = paste0("objectif_", 1:prefix$p),
                                  justified = TRUE, direction = "vertical",
-                                 selected = "objectif_1")),
+                                 selected = Y_names[1])),
         column(width = 6,
                radioGroupButtons(inputId = ns("y"), label = "y",
-                                 choiceNames = paste0("Obj N°", 1:prefix$p),
-                                 choiceValues = paste0("objectif_", 1:prefix$p),
+                                 choices = Y_names,
+                                 # choiceNames = paste0("Obj N°", 1:prefix$p),
+                                 # choiceValues = paste0("objectif_", 1:prefix$p),
                                  justified = TRUE, direction = "vertical",
-                                 selected = "objectif_2"))
+                                 selected = Y_names[2]))
       )
     })
   
     
     observe({
       req(input$y)
-      mask = paste0("objectif_", 1:prefix$p) == input$y
+      # mask = paste0("objectif_", 1:prefix$p) == input$y
+      mask = Y_names == input$y
+      
       updateRadioGroupButtons(
         session = session, inputId = "x",
-        disabledChoices = paste0("objectif_", 1:prefix$p)[mask]
+        disabledChoices = Y_names[mask]
       )
     })
     
     observe({
       req(input$x)
-      mask = paste0("objectif_", 1:prefix$p) == input$x
+      # mask = paste0("objectif_", 1:prefix$p) == input$x
+      mask = Y_names == input$x
+      
       updateRadioGroupButtons(
         session = session, inputId = "y",
-        disabledChoices = paste0("objectif_", 1:prefix$p)[mask]
+        disabledChoices = Y_names[mask]
       )
     })
     

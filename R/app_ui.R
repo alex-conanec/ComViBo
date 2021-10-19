@@ -52,6 +52,7 @@ app_ui <- function(request) {
                                                      label = "Stop simulation",
                                                      style = "gradient"))
         ),
+        uiOutput("beta_plot_ui"),
         uiOutput("decision_space_ui"),
         uiOutput("tradeoff_plot_ui")
       ),

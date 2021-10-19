@@ -12,11 +12,12 @@
 app_server <- function( input, output, session ) {
   
   n_objectif_max = 5
+  B =  10
   TT = 2
   N=10
-  data("data_quali")
-  dataset = data_quali
-  data("unites")
+  data("data_appli")
+  dataset = data_appli
+  data("choice_names")
   
   running = reactiveVal()
   running(FALSE)
@@ -29,12 +30,24 @@ app_server <- function( input, output, session ) {
   
   static_data = list(
     data = dataset,
-    indicators_idx = 18:NCOL(dataset),
-    # var_decision_idx = c(2,#:3, #enleve breed pour l'instant car trop de modalites fait planter le model quantil
-    #                      6:17),
-    var_decision_idx = c(6:16), #avec data_quali
-    unites = unites
+    indicators_idx = 20:48,
+    x_cov_adjust = c(1:4, 12:13, 16), #enleve maturation et temperature
+    var_decision_idx = c(2:6, 
+                         7:12,14, #bouffe sans betterave
+                         15:19), 
+    choice_names = choice_names
   )
+  
+  #prevent dependance between indicators and variable
+  allowed_dependence = matrix(TRUE, nrow = length(static_data$var_decision_idx), 
+                              ncol = length(static_data$indicators_idx))
+  
+  rownames(allowed_dependence) = colnames(dataset)[static_data$var_decision_idx]
+  colnames(allowed_dependence) = colnames(dataset)[static_data$indicators_idx]
+  allowed_dependence["TEMPERATURE", c(1:21, 26:29)] = FALSE
+  allowed_dependence["MATURATION", c(1:21, 27:29)] = FALSE
+  
+  static_data$allowed_dependence = allowed_dependence
   
   static_data$var_decision_quali_name =
     colnames(dataset[static_data$var_decision_idx])[
@@ -55,12 +68,14 @@ app_server <- function( input, output, session ) {
       sens = NULL,
       Y_calc = NULL,
       quantile = NULL,
+      names = NULL,
       new_tau = NULL,
-      mask = NULL),
+      mask = NULL,
+      allowed_dependence = NULL),
     constraint_form = reactiveValues(
       closed = NULL,
       var_deci_input = NULL,
-      constraint_function = NULL,
+      constraint_function = list(),
       value = NULL,
       filled = NULL,
       mask = NULL),
@@ -118,7 +133,7 @@ app_server <- function( input, output, session ) {
                                  prefix = list(id = last_id+1, r = r,
                                                static_data = static_data))
   })
-  
+
   #add constraint
   observeEvent(input$add_constraint,{
     
@@ -157,21 +172,13 @@ app_server <- function( input, output, session ) {
   }) 
   
   
-  #disable/enable the run_simu button if objectif and constraint are filled correctly
+  #disable/enable the run_simu button if objectif is filled correctly
   observe({
     if (sum(r$objectif_form$formule_ok[!r$objectif_form$closed]) <
         sum(!r$objectif_form$closed)){
       disable("run_simu")
     }else{
-      if (is.null(r$constraint_form$closed)){
-        enable("run_simu")
-      }else{
-        if (any(!r$constraint_form$filled[!r$constraint_form$closed])){
-          disable("run_simu")
-        }else{
-          enable("run_simu")
-        }
-      }
+      enable("run_simu")
     }
   })
   
@@ -217,47 +224,73 @@ app_server <- function( input, output, session ) {
     tracking[[1]] = "begenning"
     saveRDS(tracking, path_tracking)
 
-    data = isolate(r$data)
-    mask = as.data.frame(isolate(r$constraint_form$mask))
-    if (NCOL(mask) > 0){
-      mask_obj = as.data.frame(isolate(r$objectif_form$mask)) %>% apply(1, all)
-      mask = mask %>% apply(1, all)
-      data = data[mask[mask_obj],]
-      mask_pr_Y = mask_obj & mask
-    }else{
-      mask_pr_Y = as.data.frame(isolate(r$objectif_form$mask)) %>% apply(1, all)
-    }
-    print(NROW(data))
-
-    Y = as.data.frame(isolate(r$objectif_form$Y_calc))[mask_pr_Y,]
-    colnames(Y) = paste0("objectif_", 1:NCOL(Y))
-
-    X = data[,static_data$var_decision_idx]
-    is_fac = !sapply(X, is.numeric)
-    for (i in which(is_fac)){
-      X[,i] = droplevels(X[,i,T])
-    }
-
+    # data = isolate(r$data)
+    # mask = as.data.frame(isolate(r$constraint_form$mask))
+    # if (NCOL(mask) > 0){
+    #   mask_obj = as.data.frame(isolate(r$objectif_form$mask)) %>% apply(1, all)
+    #   mask = mask %>% apply(1, all)
+    #   data = data[mask[mask_obj],]
+    #   mask_pr_Y = mask_obj & mask
+    # }else{
+    #   mask_pr_Y = as.data.frame(isolate(r$objectif_form$mask)) %>% apply(1, all)
+    # }
+    # print(NROW(data))
+    # 
+    # Y = as.data.frame(isolate(r$objectif_form$Y_calc))[mask_pr_Y,]
+    # colnames(Y) = paste0("objectif_", 1:NCOL(Y))
+    # 
+    # X = data[,static_data$var_decision_idx]
+    # is_fac = !sapply(X, is.numeric)
+    # 
+    # for (i in which(is_fac)){
+    #   X[,i] = droplevels(X[,i,T])
+    # }
+    X = static_data$data[,c(1, static_data$var_decision_idx)]
+    Y = as.data.frame(isolate(r$objectif_form$Y_calc))
+    # colnames(Y) = isolate(r$objectif_form$names)
+    
+    list_dep = isolate(r$objectif_form$allowed_dependence)
+    allowed_dependence = as.matrix(as.data.frame(list_dep))
+    colnames(allowed_dependence) = colnames(Y)
+    allowed_dependence = allowed_dependence[,order(as.numeric(names(list_dep)))]
+    
     res(NULL)
     thread = future({
-      optisure(X = X,
-               Y = Y,
-               sens = isolate(r$objectif_form$sens),
-               quantile_utility_idx = isolate(r$objectif_form$quantile),
-               tau = isolate(r$objectif_form$tau),
-               globale_tau = isolate(r$objectif_form$globale_tau),
-               g = isolate(r$constraint_form$constraint_function),
-               X_space_csrt = TRUE,
-               alpha = 0.50,
-               TT = TT,
-               N = N,
-               path_tracking = path_tracking,
-               seed = 123)
+      MOOVaR(X = X,
+             Y = Y,
+             sens = isolate(r$objectif_form$sens),
+             quantile_utility_idx = isolate(r$objectif_form$quantile),
+             tau = isolate(r$objectif_form$tau),
+             globale_tau = isolate(r$objectif_form$globale_tau),
+             g = isolate(r$constraint_form$constraint_function),
+             # X_space_csrt = TRUE,
+             # alpha = 0.50,
+             allowed_dependence = allowed_dependence,
+             optim_method = "real_ind",
+             # TT = TT,
+             # N = N,
+             path_tracking = path_tracking,
+             seed = 123)
     }) %...>% res()
 
     thread <- catch(thread,
                     function(e){
                       print(e$message)
+                      if (e$message == "missing value where TRUE/FALSE needed"){
+                        showNotification(paste0("Sorry not enough data (n=", 
+                                                NROW(Y),
+                                                ") to estimate the models"),
+                                         duration = 10,
+                                         closeButton = TRUE,
+                                         type = "error")
+                      }else if (e$message == "subscript out of bounds"){
+                        showNotification(paste0("Sorry not enough data (n=", 
+                                                NROW(Y),
+                                                ") to estimate the models"),
+                                         duration = 10,
+                                         closeButton = TRUE,
+                                         type = "error")
+                      }
                       running(FALSE)
                     })
 
@@ -269,14 +302,23 @@ app_server <- function( input, output, session ) {
   observe({
     if (running() & !is.null(id_notif())){
       tracking = readRDS(path_tracking)
-      showNotification(id = id_notif(),
-                       paste0("Running: ", tracking[[length(tracking)]],
-                              " --> ",
-                              round(100 * length(tracking) / N_tracking),
-                              "%"),
-                       duration = 1,
-                       closeButton = FALSE,
-                       type = "message")
+      
+      if (tracking[[length(tracking)]] == "stop"){
+        showNotification(id = id_notif(),
+                         paste0("Stoping..."),
+                         duration = 1,
+                         closeButton = FALSE,
+                         type = "message")
+      }else{
+        showNotification(id = id_notif(),
+                         paste0("Running: ", tracking[[length(tracking)]],
+                                " --> ",
+                                round(100 * length(tracking) / N_tracking),
+                                "%"),
+                         duration = 1,
+                         closeButton = FALSE,
+                         type = "message")
+      }  
     }
   })
 
@@ -303,6 +345,7 @@ app_server <- function( input, output, session ) {
     tracking = readRDS(path_tracking)
     tracking[[length(tracking)+1]] = "stop"
     saveRDS(tracking, path_tracking)
+    disable("cancel")
   })
 
 
@@ -314,19 +357,35 @@ app_server <- function( input, output, session ) {
 
   observe({
     req(res())
-    # saveRDS(res(), "res_2p.RDS")
+    saveRDS(res(), "res_simu.RDS")
     # saveRDS(res(), "res_3p.RDS")
-    res = readRDS("res_2p.RDS")
+    res = readRDS("res_simu.RDS")
     mod_decision_space_server("decision_space_ui_1",
                               prefix = list(r = r, static_data = static_data,
                                             data = data, res = res()))
     })
 
+  output$beta_plot_ui = renderUI({
+    req(res())
+    mod_beta_plot_ui("beta_plot_ui_1")
+  })
+
+  observe({
+    req(res())
+    X = static_data$data[,c(1, static_data$var_decision_idx)]
+    Y = as.data.frame(isolate(r$objectif_form$Y_calc))
+    colnames(Y) = isolate(r$objectif_form$names)
+    mod_beta_plot_server("beta_plot_ui_1",
+                         prefix = list(res = res(), r = r,
+                                       X = X, Y = Y, B = B,
+                                       allowed_dependence = allowed_dependence,
+                                       static_data = static_data))
+  })
 
 
 
-    #render plot res
-    output$tradeoff_plot_ui = renderUI({
+  #render plot res
+  output$tradeoff_plot_ui = renderUI({
     req(res())
     mod_tradeoff_plot_ui("tradeoff_plot_ui_1")
   })
@@ -338,7 +397,7 @@ app_server <- function( input, output, session ) {
                                            r = r,
                                            p = sum(!isolate(r$objectif_form$closed))))
   })
-  
+
   #launch choice_plot_axes_ui modules
   observe({
     if (!is.null(r$tradeoff_plot$n_y)){
