@@ -25,7 +25,7 @@ app_server <- function( input, output, session ) {
   id_notif = reactiveVal()
   path_tracking = "tracking.RDS"
   N_tracking = 1 + 1 + TT + 3 
-  size_by_plot = 200
+  size_by_plot = 230 #200
 
   
   static_data = list(
@@ -193,12 +193,12 @@ app_server <- function( input, output, session ) {
   })
   
   
-  # #to prevent time out
-  # autoInvalidate1 <- reactiveTimer(1000)
-  # observe({
-  #   autoInvalidate1()
-  #   cat("---\n")
-  # })
+  #to prevent time out
+  autoInvalidate1 <- reactiveTimer(1000)
+  observe({
+    autoInvalidate1()
+    cat("---\n")
+  })
   
   
 
@@ -311,10 +311,11 @@ app_server <- function( input, output, session ) {
                          type = "message")
       }else{
         showNotification(id = id_notif(),
-                         paste0("Running: ", tracking[[length(tracking)]],
-                                " --> ",
-                                round(100 * length(tracking) / N_tracking),
-                                "%"),
+                         # paste0("Running: ", tracking[[length(tracking)]],
+                         #        " --> ",
+                         #        round(100 * length(tracking) / N_tracking),
+                         #        "%"),
+                         paste0("Running"),
                          duration = 1,
                          closeButton = FALSE,
                          type = "message")
@@ -357,7 +358,7 @@ app_server <- function( input, output, session ) {
 
   observe({
     req(res())
-    saveRDS(res(), "res_simu.RDS")
+    # saveRDS(res(), "res_simu.RDS")
     # saveRDS(res(), "res_3p.RDS")
     res = readRDS("res_simu.RDS")
     mod_decision_space_server("decision_space_ui_1",
