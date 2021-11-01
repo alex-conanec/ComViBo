@@ -17,8 +17,8 @@ mod_beta_plot_ui <- function(id){
       status = "danger", 
       solidHeader = FALSE, 
       collapsible = TRUE,
-      fluidRow(column(width = 6, tableOutput(ns("plot_R2"))),
-               column(width = 6, plotlyOutput(ns("plot_beta"))))
+      fluidRow(column(width = 6, uiOutput(ns("plot_R2"))),
+               column(width = 6, plotOutput(ns("plot_beta"))))
     )
   )
 }
@@ -30,40 +30,55 @@ mod_beta_plot_ui <- function(id){
 #' @importFrom ggplot2 ggplot geom_tile scale_fill_gradient2 aes geom_bar ylim xlab ylab theme theme_bw element_text scale_y_continuous
 #' @importFrom plotly renderPlotly
 #' @importFrom latex2exp TeX
+#' @importFrom xtable xtable
 #' @noRd 
 mod_beta_plot_server <- function(id, prefix = NULL){
   moduleServer( id, function(input, output, session){
     ns <- session$ns
-  
-    output$plot_R2 = renderTable({
+    
+    output$plot_R2 = renderUI({
 
 
       #taleau modele
       r2 = R2(prefix$X, prefix$Y, B = prefix$B, seed = 123,
               allowed_dependence = prefix$allowed_dependence)
 
-      
       p = NCOL(prefix$res$Y)
       globale_tau = isolate(prefix$r$objectif_form$globale_tau)
       quantile = isolate(prefix$r$objectif_form$quantile)
-
+      
       globale_confiance = tau_j = rep("-", p)
       methode = rep("Moy", p)
       tau_j[quantile] = prefix$res$tau_j[quantile]
       globale_confiance[globale_tau] = prefix$res$globale_confiance[globale_tau]
       methode[quantile] = "VaR"
 
-      df = data.frame(R2 = round(r2, 2), methode = methode,
+      df = data.frame(n = unlist(prefix$res$n_models[1,,TRUE]),
+                      R2 = round(r2, 2), methode = methode,
                       tau_j, globale_confiance)
-      rownames(df) = prefix$r$objectif_form$names
-      # colnames(df) = c("\(R^2\)", "\(R^3\)", "\(R^2\)", "\(R^2\)")
-      t(df)
-    }, rownames = TRUE)
+      rownames(df) = isolate(prefix$r$objectif_form$names)
+      df = t(df)
+      
+      rownames(df) = c("n", "R^2", "Méthode", "\\tau_j", "\\Phi")
+      colnames(df) = paste0("\\text{", colnames(df), "}")
+      
+      LaTeXtab <- print(xtable(df, align=rep("c", ncol(df)+1)), 
+                        floating=FALSE, tabular.environment="array", comment=FALSE, 
+                        print.results=FALSE, 
+                        sanitize.rownames.function = function(x) x,
+                        sanitize.colnames.function=function(x)gsub("\\."," ",x))
+      
+      tagList(
+        withMathJax(),
+        HTML(paste0("$$", LaTeXtab, "$$"))
+      )
+      
+      
+    })
     
     
     plot_beta = function(beta, limits=NULL){
       beta[beta==0] = NA
-      
       
       df = beta %>% as.data.frame() %>% rownames_to_column("X") %>%
         gather(key = Y, value = beta, -X)
@@ -85,7 +100,7 @@ mod_beta_plot_server <- function(id, prefix = NULL){
       pp
     }
 
-    output$plot_beta = renderPlotly({
+    output$plot_beta = renderPlot({
 
       X = prefix$X
       beta = prefix$res$beta[-1,]
@@ -121,6 +136,7 @@ mod_beta_plot_server <- function(id, prefix = NULL){
       #plafond..
       beta[beta>1] = 1
       beta[beta<(-1)] = -1
+
       colnames(beta) = colnames(prefix$Y)
       plot_beta(beta)
       
