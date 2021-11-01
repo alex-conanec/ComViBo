@@ -17,11 +17,9 @@ mod_constraint_form_ui <- function(id){
       width = 12,
       closable = TRUE,
       collapsible = TRUE,
-      tagList(
-        uiOutput(ns("var_deci_ui")), 
+      tagList( 
         fluidRow(
-          # column(width = 6, textInput(inputId = ns("formula"), 
-          #                             label = "Formule", value = "")),
+          column(width = 6, uiOutput(ns("var_deci_ui"))),
           column(width = 2, pickerInput(inputId = ns("operator"),
                                         choices = c(">", "<", "="),
                                         options = list(style = "btn-primary"))),
@@ -64,8 +62,7 @@ mod_constraint_form_server <- function(id, prefix = NULL){
     
     #make the indicator picker with the given list of item
     output$var_deci_ui = renderUI({
-      pickerInput(inputId = ns("var_deci"), label = "Variable de décision",
-                  # choices = colnames(prefix$static_data$data)[prefix$static_data$var_decision_idx],
+      pickerInput(inputId = ns("var_deci"), 
                   choices = prefix$static_data$choice_names[prefix$static_data$var_decision_idx, 1],
                   choicesOpt = list(
                     content = prefix$static_data$choice_names[prefix$static_data$var_decision_idx, 2]
