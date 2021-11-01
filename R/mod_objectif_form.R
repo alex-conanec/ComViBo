@@ -27,11 +27,12 @@ mod_objectif_form_ui <- function(id){
                          value = "")),
         column(width = 6, 
                radioGroupButtons(inputId = ns("sens"), label = "",
-                                 choices = c("Max", "Min"), selected = "Max",
+                                 choices = c("max", "min"), selected = "max",
                                  justified = TRUE)),
         column(width = 6,
                radioGroupButtons(inputId = ns("uncertainty_choice"), label = "",
-                                 choices = c("Quantile", "Espérance"), 
+                                 choiceNames = c("VaR", "Moyenne"),
+                                 choiceValues = c("Quantile", "Espérance"),
                                  selected = "Quantile", justified = TRUE)),
         uiOutput(ns("quantile_choice")) 
       )
@@ -158,8 +159,10 @@ mod_objectif_form_server <- function(id, prefix = NULL){
       if (input$uncertainty_choice == "Quantile"){
         tagList(
           column(width = 6,
-                 radioGroupButtons(inputId = ns("global_quantile"), label = "",
-                                   choices = c("Globale", "Individuel"),
+                 radioGroupButtons(inputId = ns("global_quantile"), 
+                                   label = "Confiance globale",
+                                   choiceNames = c("Oui", "Non"),
+                                   choiceValues = c("Globale", "Individuel"),
                                    selected = "Globale", justified = TRUE)),
           column(width = 6,
                  sliderInput(inputId = ns("tau"), label = "Risque", min = 0, max = 1,
