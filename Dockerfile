@@ -16,10 +16,11 @@ RUN Rscript -e 'remotes::install_version("plotly",upgrade="never", version = "4.
 RUN Rscript -e 'remotes::install_version("shinyWidgets",upgrade="never", version = "0.5.3")'
 RUN Rscript -e 'remotes::install_version("shinydashboardPlus",upgrade="never", version = "2.0.2")'
 RUN Rscript -e 'remotes::install_version("golem",upgrade="never", version = "0.3.1")'
-RUN Rscript -e 'remotes::install_github("MOOVaR",upgrade="never")'
+RUN echo 1
+RUN Rscript -e 'remotes::install_github("alex-conanec/MOOVaR",upgrade="never")'
 RUN mkdir /build_zone
 ADD . /build_zone
 WORKDIR /build_zone
 RUN R -e 'remotes::install_local(upgrade="never")'
 RUN rm -rf /build_zone
-CMD R -e "options('shiny.port'=$PORT,shiny.host='0.0.0.0');CDCapp::run_app()"
+CMD R -e "options('shiny.port'=$PORT,shiny.host='0.0.0.0');ComViBo::run_app()"
