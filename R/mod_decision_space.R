@@ -10,15 +10,7 @@
 mod_decision_space_ui <- function(id){
   ns <- NS(id)
   tagList(
-    box(
-      width = 12,
-      title = "Espace de décision", 
-      closable = FALSE, 
-      status = "danger", 
-      solidHeader = FALSE, 
-      collapsible = TRUE,
-      uiOutput(ns("plot_ui"))
-    )
+    uiOutput(ns("box_ui"))
   )
 }
     
@@ -32,6 +24,18 @@ mod_decision_space_server <- function(id, prefix = NULL){
     ns <- session$ns
  
   
+    output$box_ui = renderUI(
+      box(
+        width = 12,
+        title = paste0("Espace de décision (n=",NROW(prefix$res$X0), ")"), 
+        closable = FALSE, 
+        status = "danger", 
+        solidHeader = FALSE, 
+        collapsible = TRUE,
+        uiOutput(ns("plot_ui"))
+      )
+    )
+    
     # res_p = plot(prefix$res$X_space_csrt, as_list_plot = TRUE)
     
     nrow_react = reactive({
